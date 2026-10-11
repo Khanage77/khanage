@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1d4ed8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111418" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Khanage Workout Tracker — log every set of every workout. Works offline.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Khanage Workout Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: phone-first single column. Editor for one workout on top, history of past workouts below. */
+:root{
+  --bg:#eef0f3; --surface:#ffffff; --surface-2:#f6f7f9; --fg:#15191f; --muted:#626b78; --line:#d5dae2;
+  --accent:#1d4ed8; --accent-fg:#ffffff; --accent-soft:#e3eafd; --danger:#b83232; --ok:#227a4c;
+  --display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --body:'Barlow','Helvetica Neue',Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#111418; --surface:#1a1e25; --surface-2:#20252d; --fg:#eceff3; --muted:#98a2b0; --line:#2c333d;
+  --accent:#7c9cff; --accent-fg:#0b1330; --accent-soft:#1f2a4a; --danger:#f07878; --ok:#5fc48f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#111418; --surface:#1a1e25; --surface-2:#20252d; --fg:#eceff3; --muted:#98a2b0; --line:#2c333d;
+  --accent:#7c9cff; --accent-fg:#0b1330; --accent-soft:#1f2a4a; --danger:#f07878; --ok:#5fc48f; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 var(--body);-webkit-tap-highlight-color:transparent}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:0 32px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input{font:inherit;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:10px 8px;min-width:0;width:100%;font-variant-numeric:tabular-nums}
+input[type=number]{-moz-appearance:textfield;text-align:center}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 10px}
+h1{font:700 32px/1 var(--display);letter-spacing:.01em;margin:0;text-transform:uppercase}
+h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:6px}
+.tools{display:flex;gap:8px;align-items:center}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:999px}
+.unit{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:13px;font-weight:600}
+.unit button{padding:6px 12px;color:var(--muted)}
+.unit button[aria-pressed=true]{background:var(--fg);color:var(--bg)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:12px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card-head input[type=date]{width:auto;padding:6px 8px;font-weight:600}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 30px 64px 72px 32px;gap:6px 6px;align-items:center;margin-top:12px}
+.cols .h{font:600 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-bottom:2px}
+.cols .h.num{text-align:center}
+.ex{display:contents}
+.ex .name{grid-row:span 2;align-self:stretch;display:flex;flex-direction:column;gap:4px;min-width:0}
+.ex .name input{flex:1;padding:8px}
+.ex .last{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.ex .set{font:700 16px/1 var(--display);color:var(--muted);text-align:center}
+.ex .rm{grid-row:span 2;align-self:stretch;color:var(--muted);font-size:20px;line-height:1;border-radius:6px}
+.ex .rm:hover{color:var(--danger);background:var(--surface-2)}
+.ex .divider{grid-column:1/-1;height:1px;background:var(--line);margin:4px 0}
+.ex .setctl{grid-column:1/-1;display:flex;gap:6px;justify-content:flex-end}
+.ex .setctl button{font-size:12px;font-weight:600;color:var(--muted);padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2)}
+.ex .setctl button:hover{color:var(--fg)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:13px;font-weight:600}
+.seg button{padding:6px 12px;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--fg);color:var(--bg)}
+.setting{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:14px}
+/* Phones: exercise name on its own row, sets underneath */
+@media (max-width:520px){
+  .cols{grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 32px;gap:6px}
+  .cols .h.exh{display:none}
+  .ex .name{grid-column:1/-1;grid-row:auto!important;flex-direction:row;align-items:center;gap:8px;margin-top:4px}
+  .ex .name input{flex:1 1 55%}
+  .ex .name .last{flex:0 1 auto;max-width:45%}
+  .ex .name .last:empty{display:none}
+  .ex .rm{align-self:center}
+}
+
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{padding:10px 14px;border-radius:8px;font-weight:600;font-size:15px;border:1px solid var(--line);background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.5;cursor:default}
+
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.foot .vol{font-variant-numeric:tabular-nums}
+.foot .vol b{color:var(--fg);font:700 18px/1 var(--display)}
+.status{display:inline-flex;align-items:center;gap:6px}
+.status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.status.ok::before{background:var(--ok)}
+.status.busy::before{background:var(--accent)}
+.status.err::before{background:var(--danger)}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--surface-2);font-size:14px}
+
+.hist-head{display:flex;justify-content:space-between;align-items:baseline;margin-top:28px;gap:10px}
+.hist-head h2{font:700 22px/1 var(--display);text-transform:uppercase;margin:0;letter-spacing:.02em}
+.hist{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.hist li{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.hist li.active{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.hist button.open{display:block;width:100%;text-align:left;padding:12px 14px}
+.hist .d{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.hist .d b{font:700 18px/1 var(--display)}
+.hist .d span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hist .lines{margin-top:8px;display:grid;gap:3px;font-size:14px}
+.hist .lines div{display:flex;justify-content:space-between;gap:10px}
+.hist .lines div span:last-child{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.empty{color:var(--muted);font-size:14px;padding:14px;text-align:center;border:1px dashed var(--line);border-radius:10px;margin-top:10px}
+.note{font-size:13px;color:var(--muted);margin-top:10px}
+.data{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;align-items:center}
+.data .eyebrow{width:100%}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:no-preference){ .hist li,.btn{transition:border-color .15s,background .15s} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Khanage<small>workout tracker</small></h1>
+    <div class="tools"><button type="button" class="btn primary sm" id="install" hidden>Install</button>
+    <div class="unit" role="group" aria-label="Weight unit">
+      <button type="button" id="unit-kg" aria-pressed="true">kg</button>
+      <button type="button" id="unit-lb" aria-pressed="false">lb</button>
+    </div></div>
+  </header>
+
+  <section class="card" id="editor" aria-live="polite">
+    <div class="empty">Connecting…</div>
+  </section>
+
+  <div class="hist-head">
+    <h2>History</h2>
+    <span class="eyebrow" id="hist-count"></span>
+  </div>
+  <ul class="hist" id="hist"></ul>
+
+  <div class="data">
+    <span class="eyebrow">Settings</span>
+    <div class="setting"><span>Sets per exercise <span class="note" style="margin:0">(new exercises start with this many)</span></span>
+      <div class="seg" role="group" aria-label="Default sets per exercise" id="sets-seg">
+        <button type="button" data-sets="2">2</button><button type="button" data-sets="3">3</button><button type="button" data-sets="4">4</button><button type="button" data-sets="5">5</button>
+      </div></div>
+  </div>
+  <div class="data">
+    <span class="eyebrow">Your data</span>
+    <button type="button" class="btn" id="export-csv">Export CSV</button>
+    <button type="button" class="btn" id="backup">Backup</button>
+    <button type="button" class="btn" id="restore">Restore</button>
+    <input type="file" id="restore-file" accept="application/json,.json" hidden>
+  </div>
+  <p class="note">Each phone keeps its own workouts; nothing is shared or uploaded. Take a backup before changing phones or clearing browser data.</p>
+  <datalist id="exnames"></datalist>
+</div>
+
+<script>
+(function(){
+  const LS_KEY='twosets.v1', UNIT_KEY='twosets.unit', SETS_KEY='twosets.sets', MAX_SETS=8;
+  const $=s=>document.querySelector(s);
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  let unit='kg'; try{ unit=localStorage.getItem(UNIT_KEY)||'kg' }catch(e){}
+  let defaultSets=2; try{ defaultSets=Math.min(MAX_SETS,Math.max(1,parseInt(localStorage.getItem(SETS_KEY),10)||2)) }catch(e){}
+  let store=null, sessions={}, currentId=null, dirty={}, saving={}, timers={}, chains={}, confirmDelete=false, booted=false;
+  let status={kind:'ok',text:''};
+
+  /* Snapshots from the synced store are frozen: always work on an editable copy. */
+  const clone=o=>JSON.parse(JSON.stringify(o));
+  const canon=s=>JSON.stringify([s.date||'',(s.exercises||[]).map(e=>[e.name||'',(e.sets||[]).map(x=>[x.reps??null,x.weight??null])])]);
+  const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+  const blankSet=()=>({reps:null,weight:null});
+  const blankEx=()=>({name:'',sets:Array.from({length:defaultSets},blankSet)});
+  const blankSession=()=>({date:today(),exercises:[blankEx()],createdAt:Date.now()});
+  const fmtDate=iso=>{const [y,m,d]=(iso||'').split('-').map(Number);if(!y)return iso||'';return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})};
+  const fmtSet=s=>(s.reps??'–')+'×'+(s.weight??'–');
+  const volume=sess=>(sess.exercises||[]).reduce((t,e)=>t+e.sets.reduce((u,s)=>u+((+s.reps||0)*(+s.weight||0)),0),0);
+  const sortedIds=()=>Object.keys(sessions).sort((a,b)=>(sessions[b].date||'').localeCompare(sessions[a].date||'')||(sessions[b].createdAt||0)-(sessions[a].createdAt||0));
+  const hasContent=sess=>(sess.exercises||[]).some(e=>e.name.trim()||e.sets.some(s=>s.reps!=null||s.weight!=null));
+
+  /* ---------- storage backends ---------- */
+  function localStore(){
+    let data=localData();
+    const persist=()=>{ try{ localStorage.setItem(LS_KEY,JSON.stringify(data)) }catch(e){ throw new Error('This browser is not allowing storage.') } };
+    return { kind:'local', label:'on this device',
+      subscribe(cb){ cb(data); return ()=>{} },
+      async save(id,d){ data[id]=d; persist() },
+      async remove(id){ delete data[id]; persist() },
+      replaceAll(d){ data=d; persist(); return data } };
+  }
+  function localData(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{}')||{} }catch(e){ return {} } }
+
+  /* ---------- saving ---------- */
+  function setStatus(kind,text){ status={kind,text}; const el=$('#status'); if(el){el.className='status '+kind; el.textContent=text} }
+  function scheduleSave(id){
+    dirty[id]=true; clearTimeout(timers[id]);
+    setStatus('busy','Saving…');
+    timers[id]=setTimeout(()=>flush(id),700);
+  }
+  function flush(id){
+    const sess=sessions[id]; if(!sess) return;
+    dirty[id]=false; saving[id]=(saving[id]||0)+1;
+    const body=clone(sess);
+    chains[id]=(chains[id]||Promise.resolve()).then(()=>store.save(id,body)).then(()=>{
+      if(!dirty[id]) setStatus('ok','Saved · '+store.label);
+    }).catch(e=>{
+      const msg=e&&e.code==='quota_exceeded'?'Storage is full. Delete old workouts to keep saving.':(e&&e.message)||'Could not save';
+      setStatus('err',msg);
+    }).then(()=>{ saving[id]=Math.max(0,(saving[id]||1)-1) });
+  }
+
+  /* ---------- rendering ---------- */
+  function lastFor(name,excludeId){
+    const n=name.trim().toLowerCase(); if(!n) return null;
+    for(const id of sortedIds()){ if(id===excludeId) continue;
+      const e=(sessions[id].exercises||[]).find(x=>x.name.trim().toLowerCase()===n);
+      if(e&&e.sets.some(s=>s.reps!=null||s.weight!=null)) return {date:sessions[id].date,sets:e.sets};
+    }
+    return null;
+  }
+  function renderNames(){
+    const seen=new Set(), out=[];
+    for(const id of sortedIds()) for(const e of sessions[id].exercises||[]){const n=e.name.trim();if(n&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());out.push(n)}}
+    $('#exnames').innerHTML=out.map(n=>'<option value="'+esc(n)+'">').join('');
+  }
+  function renderEditor(){
+    const sess=sessions[currentId]; const el=$('#editor');
+    if(!sess){ el.innerHTML='<div class="empty">No workout open.</div>'; return }
+    const rows=sess.exercises.map((e,i)=>{
+      const last=lastFor(e.name,currentId);
+      const lastTxt=last?'Last: '+last.sets.map(fmtSet).join(' · '):'';
+      const n=e.sets.length;
+      return '<div class="ex" data-i="'+i+'">'
+        +'<div class="name" style="grid-row:span '+n+'"><input type="text" id="ex-'+i+'-name" list="exnames" placeholder="Exercise" autocomplete="off" value="'+esc(e.name)+'" data-f="name"><div class="last" title="'+esc(lastTxt)+'">'+esc(lastTxt)+'</div></div>'
+        +e.sets.map((s,k)=>'<div class="set">'+(k+1)+'</div>'
+          +'<input type="number" inputmode="numeric" min="0" step="1" id="ex-'+i+'-r'+k+'" placeholder="reps" value="'+(s.reps??'')+'" data-f="reps" data-k="'+k+'">'
+          +'<input type="number" inputmode="decimal" min="0" step="0.5" id="ex-'+i+'-w'+k+'" placeholder="'+unit+'" value="'+(s.weight??'')+'" data-f="weight" data-k="'+k+'">'
+          +(k===0?'<button type="button" class="rm" style="grid-row:span '+n+'" data-rm="'+i+'" aria-label="Remove exercise" title="Remove exercise">×</button>':'')
+        ).join('')
+        +'<div class="setctl">'+(n>1?'<button type="button" data-delset="'+i+'" aria-label="Remove last set">– set</button>':'')+(n<MAX_SETS?'<button type="button" data-addset="'+i+'" aria-label="Add a set">+ set</button>':'')+'</div>'
+        +(i<sess.exercises.length-1?'<div class="divider"></div>':'')
+        +'</div>';
+    }).join('');
+    el.innerHTML=
+      '<div class="card-head"><span class="eyebrow">Workout</span><input type="date" id="sess-date" value="'+esc(sess.date)+'" aria-label="Workout date"></div>'
+      +'<div class="cols"><div class="h exh">Exercise</div><div class="h num">Set</div><div class="h num">Reps</div><div class="h num">Weight ('+unit+')</div><div></div>'+rows+'</div>'
+      +'<div class="actions"><button type="button" class="btn primary" id="add-ex">+ Add exercise</button><button type="button" class="btn" id="new-sess">New workout</button><button type="button" class="btn danger" id="del-sess">Delete</button></div>'
+      +(confirmDelete?'<div class="confirm" id="confirm">Delete this workout for good?<button type="button" class="btn danger" id="del-yes">Delete</button><button type="button" class="btn" id="del-no">Keep</button></div>':'')
+      +'<div class="foot"><span class="vol">Volume <b id="vol">'+volume(sess).toLocaleString()+'</b> '+unit+'</span><span class="status '+status.kind+'" id="status">'+esc(status.text)+'</span></div>';
+  }
+  function renderHistory(){
+    const ids=sortedIds().filter(id=>hasContent(sessions[id])||id===currentId);
+    $('#hist-count').textContent=ids.length?ids.length+(ids.length===1?' workout':' workouts'):'';
+    if(!ids.length){ $('#hist').innerHTML='<li class="empty" style="border:0;background:none">Your first workout will appear here once you log a set.</li>'; return }
+    $('#hist').innerHTML=ids.map(id=>{const s=sessions[id];const ex=(s.exercises||[]).filter(e=>e.name.trim());
+      return '<li class="'+(id===currentId?'active':'')+'"><button type="button" class="open" data-open="'+id+'">'
+        +'<div class="d"><b>'+esc(fmtDate(s.date))+'</b><span>'+ex.length+' ex · '+volume(s).toLocaleString()+' '+unit+'</span></div>'
+        +(ex.length?'<div class="lines">'+ex.map(e=>'<div><span>'+esc(e.name)+'</span><span>'+e.sets.map(fmtSet).join(' · ')+'</span></div>').join('')+'</div>':'<div class="lines"><div><span style="color:var(--muted)">Empty workout</span></div></div>')
+        +'</button></li>'}).join('');
+  }
+  function renderAll(){ renderNames(); renderEditor(); renderHistory(); }
+
+  /* ---------- events ---------- */
+  $('#editor').addEventListener('input',ev=>{
+    const t=ev.target, sess=sessions[currentId]; if(!sess) return;
+    if(t.id==='sess-date'){ if(t.value){sess.date=t.value; scheduleSave(currentId); renderHistory()} return }
+    const ex=t.closest('.ex'); if(!ex) return;
+    const e=sess.exercises[+ex.dataset.i]; if(!e) return;
+    if(t.dataset.f==='name'){ e.name=t.value; const last=lastFor(e.name,currentId); ex.querySelector('.last').textContent=last?'Last: '+last.sets.map(fmtSet).join(' · '):''; }
+    else { const v=t.value===''?null:+t.value; e.sets[+t.dataset.k][t.dataset.f]=isNaN(v)?null:v; $('#vol').textContent=volume(sess).toLocaleString(); }
+    scheduleSave(currentId); renderHistory();
+  });
+  $('#editor').addEventListener('click',ev=>{
+    const b=ev.target.closest('button'); if(!b) return;
+    const sess=sessions[currentId];
+    if(b.id==='add-ex'){ sess.exercises.push(blankEx()); renderEditor(); const n=sess.exercises.length-1; const inp=document.getElementById('ex-'+n+'-name'); if(inp) inp.focus(); }
+    else if(b.dataset.addset!=null){ const e=sess.exercises[+b.dataset.addset]; if(e&&e.sets.length<MAX_SETS){ e.sets.push(blankSet()); scheduleSave(currentId); renderEditor(); renderHistory(); const inp=document.getElementById('ex-'+b.dataset.addset+'-r'+(e.sets.length-1)); if(inp) inp.focus(); } }
+    else if(b.dataset.delset!=null){ const e=sess.exercises[+b.dataset.delset]; if(e&&e.sets.length>1){ const last=e.sets[e.sets.length-1]; if(last.reps!=null||last.weight!=null){ toast('Clear set '+e.sets.length+' first, then remove it'); return } e.sets.pop(); scheduleSave(currentId); renderEditor(); renderHistory(); } }
+    else if(b.dataset.rm!=null){ sess.exercises.splice(+b.dataset.rm,1); if(!sess.exercises.length) sess.exercises.push(blankEx()); scheduleSave(currentId); renderEditor(); renderHistory(); }
+    else if(b.id==='new-sess'){ openNew(); }
+    else if(b.id==='del-sess'){ confirmDelete=true; renderEditor(); }
+    else if(b.id==='del-no'){ confirmDelete=false; renderEditor(); }
+    else if(b.id==='del-yes'){ const id=currentId; confirmDelete=false; clearTimeout(timers[id]); dirty[id]=false; delete sessions[id];
+      (chains[id]||Promise.resolve()).then(()=>store.remove(id)).catch(e=>setStatus('err',(e&&e.message)||'Could not delete'));
+      currentId=sortedIds()[0]||null; if(!currentId) openNew(); else renderAll(); }
+  });
+  $('#hist').addEventListener('click',ev=>{
+    const b=ev.target.closest('[data-open]'); if(!b||!sessions[b.dataset.open]) return;
+    if(currentId&&!hasContent(sessions[currentId])&&currentId!==b.dataset.open) delete sessions[currentId];
+    currentId=b.dataset.open; confirmDelete=false; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
+  });
+  function openNew(){
+    if(currentId&&sessions[currentId]&&!hasContent(sessions[currentId])) delete sessions[currentId];
+    currentId=uid(); sessions[currentId]=blankSession(); confirmDelete=false; renderAll();
+    const inp=document.getElementById('ex-0-name'); if(inp) inp.focus();
+  }
+  function setUnit(u){ unit=u; try{localStorage.setItem(UNIT_KEY,u)}catch(e){} $('#unit-kg').setAttribute('aria-pressed',u==='kg'); $('#unit-lb').setAttribute('aria-pressed',u==='lb'); if(store) renderAll(); }
+  $('#unit-kg').onclick=()=>setUnit('kg'); $('#unit-lb').onclick=()=>setUnit('lb');
+  setUnit(unit);
+  function setDefaultSets(n){ defaultSets=n; try{localStorage.setItem(SETS_KEY,String(n))}catch(e){}
+    document.querySelectorAll('#sets-seg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.sets===n));
+    // An untouched exercise in the open workout follows the new default
+    const sess=sessions[currentId]; if(sess){ let changed=false; sess.exercises.forEach(e=>{ if(!e.name.trim()&&e.sets.every(x=>x.reps==null&&x.weight==null)&&e.sets.length!==n){ e.sets=Array.from({length:n},blankSet); changed=true } }); if(changed) renderEditor(); }
+  }
+  $('#sets-seg').addEventListener('click',ev=>{ const b=ev.target.closest('[data-sets]'); if(b) setDefaultSets(+b.dataset.sets); });
+  setDefaultSets(defaultSets);
+
+  /* ---------- boot ---------- */
+  function onData(remote){
+    const prevId=currentId, before=currentId&&sessions[currentId]?canon(sessions[currentId]):null;
+    for(const id of Object.keys(remote)){
+      if(dirty[id]||saving[id]) continue;
+      if(sessions[id]&&canon(sessions[id])===canon(remote[id])) continue;
+      sessions[id]=clone(remote[id]);
+    }
+    for(const id of Object.keys(sessions)){ if(!remote[id]&&!dirty[id]&&!saving[id]&&id!==currentId&&hasContent(sessions[id])) delete sessions[id]; }
+    if(!currentId||!sessions[currentId]){
+      const ids=sortedIds();
+      if(ids.length&&sessions[ids[0]].date===today()) currentId=ids[0]; else { currentId=uid(); sessions[currentId]=blankSession(); }
+    }
+    const after=sessions[currentId]?canon(sessions[currentId]):null;
+    renderNames(); renderHistory();
+    if(!booted||prevId!==currentId||before!==after){
+      const a=document.activeElement, keep=a&&a.id&&$('#editor').contains(a)?a.id:null;
+      renderEditor();
+      if(keep){ const n=document.getElementById(keep); if(n) n.focus(); }
+    }
+    booted=true;
+  }
+  function start(){
+    store=localStore();
+    setStatus('ok','Saved on this device');
+    store.subscribe(onData);
+  }
+  start();
+
+  /* ---------- export / backup / restore ---------- */
+  function toast(msg){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)} t.textContent=msg; clearTimeout(toast.t); toast.t=setTimeout(()=>t.remove(),2600); }
+  function download(name,text,type){
+    const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
+  const csvCell=v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  $('#export-csv').onclick=()=>{
+    const rows=[['date','exercise','set','reps','weight','unit']];
+    for(const id of sortedIds().reverse()){ const s=sessions[id]; if(!hasContent(s)) continue;
+      (s.exercises||[]).forEach(e=>{ if(!e.name.trim()) return; e.sets.forEach((x,k)=>{ if(x.reps==null&&x.weight==null) return; rows.push([s.date,e.name.trim(),k+1,x.reps??'',x.weight??'',unit]) }) }) }
+    if(rows.length===1){ toast('Nothing to export yet'); return }
+    download('khanage-workouts-'+today()+'.csv',rows.map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv');
+  };
+  $('#backup').onclick=()=>{
+    const data=localData(); const n=Object.keys(data).length;
+    if(!n){ toast('Nothing to back up yet'); return }
+    download('khanage-backup-'+today()+'.json',JSON.stringify({app:'khanage',version:1,exported:new Date().toISOString(),unit,workouts:data},null,1),'application/json');
+    toast('Backup saved · '+n+(n===1?' workout':' workouts'));
+  };
+  $('#restore').onclick=()=>$('#restore-file').click();
+  $('#restore-file').addEventListener('change',ev=>{
+    const f=ev.target.files&&ev.target.files[0]; ev.target.value=''; if(!f) return;
+    f.text().then(txt=>{
+      let j; try{ j=JSON.parse(txt) }catch(e){ toast('That file is not a Khanage backup'); return }
+      const w=j&&(j.app==='khanage'||j.app==='two-sets')&&j.workouts&&typeof j.workouts==='object'?j.workouts:null;
+      if(!w){ toast('That file is not a Khanage backup'); return }
+      for(const k in w){ (w[k].exercises||[]).forEach(e=>{ if(!Array.isArray(e.sets)||!e.sets.length) e.sets=[blankSet()]; }) }
+      const merged=Object.assign({},localData(),w); // keeps what is on this device, adds the backup
+      store.replaceAll(merged); sessions={}; currentId=null; dirty={}; saving={}; booted=false;
+      onData(merged); toast('Restored · '+Object.keys(w).length+' workouts');
+    });
+  });
+
+  /* ---------- install + offline ---------- */
+  let installEvt=null;
+  window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; $('#install').hidden=false; });
+  $('#install').onclick=async()=>{ if(!installEvt) return; installEvt.prompt(); const r=await installEvt.userChoice; if(r&&r.outcome==='accepted'){ $('#install').hidden=true; installEvt=null; } };
+  window.addEventListener('appinstalled',()=>{ $('#install').hidden=true; toast('Installed — find Khanage on your home screen'); });
+  if('serviceWorker' in navigator && location.protocol!=='file:'){
+    window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  }
+})();
+</script>
+
+
+</body>
+</html>
