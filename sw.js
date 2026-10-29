@@ -1,6 +1,6 @@
-/* Khanage Workout Tracker service worker: cache the app shell so it opens offline.
+/* YouFit Workout Tracker service worker: cache the app shell so it opens offline.
    Bump CACHE when files change so phones pick up the new version. */
-const CACHE = 'khanage-v1';
+const CACHE = 'youfit-v2';
 const SHELL = [
   './',
   './index.html',

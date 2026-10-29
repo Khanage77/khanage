@@ -3,31 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1d4ed8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111418" media="(prefers-color-scheme: dark)">
-<meta name="description" content="Khanage Workout Tracker — log every set of every workout. Works offline.">
+<meta name="theme-color" content="#6db33f" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141a20" media="(prefers-color-scheme: dark)">
+<meta name="description" content="YouFit Workout Tracker — log every set of every workout. Works offline.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<title>Khanage Workout Tracker</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<title>YouFit Workout Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap">
 <style>
-/* Layout: phone-first single column. Editor for one workout on top, history of past workouts below. */
+/* Layout: phone-first single column. Editor for one workout on top, history of past workouts below.
+   Palette comes from the YouFit logo: slate ink (--ink) and leaf green (--brand). --accent is a darker
+   green so white text on buttons stays readable; in dark mode the brand green itself is the accent. */
 :root{
-  --bg:#eef0f3; --surface:#ffffff; --surface-2:#f6f7f9; --fg:#15191f; --muted:#626b78; --line:#d5dae2;
-  --accent:#1d4ed8; --accent-fg:#ffffff; --accent-soft:#e3eafd; --danger:#b83232; --ok:#227a4c;
-  --display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
-  --body:'Barlow','Helvetica Neue',Arial,sans-serif;
+  --bg:#f3f5f1; --surface:#ffffff; --surface-2:#f5f7f3; --fg:#232b33; --muted:#5f6a73; --line:#d6dcd4;
+  --brand:#6db33f; --ink:#2b3440;
+  --accent:#4f9a2b; --accent-fg:#ffffff; --accent-soft:#e4f2d8; --danger:#b83232; --ok:#3f8f2a;
+  --display:'Nunito','Segoe UI',Arial,sans-serif;
+  --body:'Nunito','Segoe UI','Helvetica Neue',Arial,sans-serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#111418; --surface:#1a1e25; --surface-2:#20252d; --fg:#eceff3; --muted:#98a2b0; --line:#2c333d;
-  --accent:#7c9cff; --accent-fg:#0b1330; --accent-soft:#1f2a4a; --danger:#f07878; --ok:#5fc48f; color-scheme:dark } }
+  --bg:#141a20; --surface:#1c232b; --surface-2:#222b34; --fg:#e8edf1; --muted:#97a3ad; --line:#2e3842;
+  --brand:#8bd05a; --ink:#e8edf1;
+  --accent:#8bd05a; --accent-fg:#0f1f08; --accent-soft:#22361a; --danger:#f07878; --ok:#7bd26b; color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#111418; --surface:#1a1e25; --surface-2:#20252d; --fg:#eceff3; --muted:#98a2b0; --line:#2c333d;
-  --accent:#7c9cff; --accent-fg:#0b1330; --accent-soft:#1f2a4a; --danger:#f07878; --ok:#5fc48f; color-scheme:dark }
+  --bg:#141a20; --surface:#1c232b; --surface-2:#222b34; --fg:#e8edf1; --muted:#97a3ad; --line:#2e3842;
+  --brand:#8bd05a; --ink:#e8edf1;
+  --accent:#8bd05a; --accent-fg:#0f1f08; --accent-soft:#22361a; --danger:#f07878; --ok:#7bd26b; color-scheme:dark }
 
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -40,8 +45,9 @@ input[type=number]{-moz-appearance:textfield;text-align:center}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 10px}
-h1{font:700 32px/1 var(--display);letter-spacing:.01em;margin:0;text-transform:uppercase}
-h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:6px}
+h1{margin:0;display:flex;flex-direction:column;gap:4px}
+h1 .logo{display:block;height:42px;width:auto;max-width:100%}
+h1 small{display:block;font:700 11px/1 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding-left:2px}
 .tools{display:flex;gap:8px;align-items:center}
 .btn.sm{padding:6px 10px;font-size:13px;border-radius:999px}
 .unit{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:13px;font-weight:600}
@@ -115,12 +121,26 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
 .data{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;align-items:center}
 .data .eyebrow{width:100%}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
+.toast.upd{display:flex;align-items:center;gap:10px;bottom:calc(64px + env(safe-area-inset-bottom,0px));white-space:nowrap}
+.toast.upd button{color:var(--bg);font-weight:600;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,.14)}
+.toast.upd #upd-go{background:var(--accent);color:var(--accent-fg)}
 @media (prefers-reduced-motion:no-preference){ .hist li,.btn{transition:border-color .15s,background .15s} }
 </style>
 
 <div class="wrap">
   <header class="top">
-    <h1>Khanage<small>workout tracker</small></h1>
+    <h1><svg class="logo" viewBox="0 0 250 100" preserveAspectRatio="xMinYMid meet" role="img" aria-label="YouFit"><title>YouFit</title>
+      <!-- Logo: the Y is a lifter holding a barbell overhead, with a green arc behind -->
+      <path d="M13.6 73 A42 42 0 0 1 82.2 25" fill="none" stroke="var(--brand)" stroke-width="5" stroke-linecap="round"/>
+      <g fill="none" stroke="var(--ink)" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 29 H82" stroke-width="3.5"/>
+        <path d="M35 33 L52 58 L69 33" stroke-width="8"/>
+        <path d="M52 58 V88" stroke-width="9"/>
+      </g>
+      <circle cx="52" cy="46" r="6" fill="var(--ink)"/>
+      <g fill="var(--ink)"><rect x="22" y="23" width="3.5" height="12" rx="1.2"/><rect x="26.5" y="20.5" width="4.5" height="17" rx="1.4"/><rect x="73" y="20.5" width="4.5" height="17" rx="1.4"/><rect x="78.5" y="23" width="3.5" height="12" rx="1.2"/></g>
+      <text x="59" y="88" font-family="Nunito,'Segoe UI',Arial,sans-serif" font-weight="800" font-size="62" letter-spacing="-1"><tspan fill="var(--ink)">ou</tspan><tspan fill="var(--brand)">Fit</tspan></text>
+    </svg><small>workout tracker</small></h1>
     <div class="tools"><button type="button" class="btn primary sm" id="install" hidden>Install</button>
     <div class="unit" role="group" aria-label="Weight unit">
       <button type="button" id="unit-kg" aria-pressed="true">kg</button>
@@ -158,6 +178,7 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
 
 <script>
 (function(){
+  // Storage keys keep their original names on purpose: renaming them would hide every workout already logged on a phone.
   const LS_KEY='twosets.v1', UNIT_KEY='twosets.unit', SETS_KEY='twosets.sets', MAX_SETS=8;
   const $=s=>document.querySelector(s);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -169,22 +190,30 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
 
   /* Snapshots from the synced store are frozen: always work on an editable copy. */
   const clone=o=>JSON.parse(JSON.stringify(o));
-  const canon=s=>JSON.stringify([s.date||'',(s.exercises||[]).map(e=>[e.name||'',(e.sets||[]).map(x=>[x.reps??null,x.weight??null])])]);
+  const canon=s=>JSON.stringify([s.date||'',s.unit||'',(s.exercises||[]).map(e=>[e.name||'',(e.sets||[]).map(x=>[x.reps??null,x.weight??null])])]);
+  /* Every workout remembers the unit it was logged in, so switching kg/lb never relabels old data. */
+  const sessUnit=s=>(s&&s.unit)||unit;
+  const convertW=(w,from,to)=>{ if(w==null||from===to) return w; const v=from==='kg'?w*2.20462:w/2.20462; return Math.round(v*2)/2 };
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
   const blankSet=()=>({reps:null,weight:null});
   const blankEx=()=>({name:'',sets:Array.from({length:defaultSets},blankSet)});
-  const blankSession=()=>({date:today(),exercises:[blankEx()],createdAt:Date.now()});
+  const blankSession=()=>({date:today(),unit,exercises:[blankEx()],createdAt:Date.now()});
+  /* Repeat: same exercises and set counts as the last logged workout, values left empty */
+  const repeatSession=src=>({date:today(),unit,createdAt:Date.now(),exercises:(src.exercises||[]).filter(e=>e.name.trim()).map(e=>({name:e.name.trim(),sets:Array.from({length:Math.max(1,e.sets.length)},blankSet)}))});
   const fmtDate=iso=>{const [y,m,d]=(iso||'').split('-').map(Number);if(!y)return iso||'';return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})};
   const fmtSet=s=>(s.reps??'–')+'×'+(s.weight??'–');
   const volume=sess=>(sess.exercises||[]).reduce((t,e)=>t+e.sets.reduce((u,s)=>u+((+s.reps||0)*(+s.weight||0)),0),0);
   const sortedIds=()=>Object.keys(sessions).sort((a,b)=>(sessions[b].date||'').localeCompare(sessions[a].date||'')||(sessions[b].createdAt||0)-(sessions[a].createdAt||0));
   const hasContent=sess=>(sess.exercises||[]).some(e=>e.name.trim()||e.sets.some(s=>s.reps!=null||s.weight!=null));
+  const lastSession=excludeId=>{ for(const id of sortedIds()){ if(id!==excludeId&&hasContent(sessions[id])) return sessions[id] } return null };
 
   /* ---------- storage backends ---------- */
   function localStore(){
     let data=localData();
     const persist=()=>{ try{ localStorage.setItem(LS_KEY,JSON.stringify(data)) }catch(e){ throw new Error('This browser is not allowing storage.') } };
+    // Workouts saved before units were stored were shown in the unit chosen at the time; keep them that way.
+    let fixed=false; for(const k in data){ if(data[k]&&!data[k].unit){ data[k].unit=unit; fixed=true } } if(fixed){ try{ persist() }catch(e){} }
     return { kind:'local', label:'on this device',
       subscribe(cb){ cb(data); return ()=>{} },
       async save(id,d){ data[id]=d; persist() },
@@ -217,10 +246,14 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
     const n=name.trim().toLowerCase(); if(!n) return null;
     for(const id of sortedIds()){ if(id===excludeId) continue;
       const e=(sessions[id].exercises||[]).find(x=>x.name.trim().toLowerCase()===n);
-      if(e&&e.sets.some(s=>s.reps!=null||s.weight!=null)) return {date:sessions[id].date,sets:e.sets};
+      if(e&&e.sets.some(s=>s.reps!=null||s.weight!=null)) return {date:sessions[id].date,unit:sessUnit(sessions[id]),sets:e.sets};
     }
     return null;
   }
+  const lastText=(last,su)=>last?'Last: '+last.sets.map(fmtSet).join(' · ')+(last.unit!==su?' '+last.unit:''):'';
+  /* Previous values show as placeholders so a repeated workout reads like last time's sheet */
+  const phReps=(last,k)=>last&&last.sets[k]&&last.sets[k].reps!=null?String(last.sets[k].reps):'reps';
+  const phWeight=(last,k,su)=>{ const w=last&&last.sets[k]?last.sets[k].weight:null; return w==null?su:String(convertW(w,last.unit,su)) };
   function renderNames(){
     const seen=new Set(), out=[];
     for(const id of sortedIds()) for(const e of sessions[id].exercises||[]){const n=e.name.trim();if(n&&!seen.has(n.toLowerCase())){seen.add(n.toLowerCase());out.push(n)}}
@@ -229,15 +262,16 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
   function renderEditor(){
     const sess=sessions[currentId]; const el=$('#editor');
     if(!sess){ el.innerHTML='<div class="empty">No workout open.</div>'; return }
+    const su=sessUnit(sess); syncUnitToggle(su);
     const rows=sess.exercises.map((e,i)=>{
       const last=lastFor(e.name,currentId);
-      const lastTxt=last?'Last: '+last.sets.map(fmtSet).join(' · '):'';
+      const lastTxt=lastText(last,su);
       const n=e.sets.length;
       return '<div class="ex" data-i="'+i+'">'
         +'<div class="name" style="grid-row:span '+n+'"><input type="text" id="ex-'+i+'-name" list="exnames" placeholder="Exercise" autocomplete="off" value="'+esc(e.name)+'" data-f="name"><div class="last" title="'+esc(lastTxt)+'">'+esc(lastTxt)+'</div></div>'
         +e.sets.map((s,k)=>'<div class="set">'+(k+1)+'</div>'
-          +'<input type="number" inputmode="numeric" min="0" step="1" id="ex-'+i+'-r'+k+'" placeholder="reps" value="'+(s.reps??'')+'" data-f="reps" data-k="'+k+'">'
-          +'<input type="number" inputmode="decimal" min="0" step="0.5" id="ex-'+i+'-w'+k+'" placeholder="'+unit+'" value="'+(s.weight??'')+'" data-f="weight" data-k="'+k+'">'
+          +'<input type="number" inputmode="numeric" min="0" step="1" id="ex-'+i+'-r'+k+'" placeholder="'+esc(phReps(last,k))+'" value="'+(s.reps??'')+'" data-f="reps" data-k="'+k+'">'
+          +'<input type="number" inputmode="decimal" min="0" step="any" id="ex-'+i+'-w'+k+'" placeholder="'+esc(phWeight(last,k,su))+'" value="'+(s.weight??'')+'" data-f="weight" data-k="'+k+'">'
           +(k===0?'<button type="button" class="rm" style="grid-row:span '+n+'" data-rm="'+i+'" aria-label="Remove exercise" title="Remove exercise">×</button>':'')
         ).join('')
         +'<div class="setctl">'+(n>1?'<button type="button" data-delset="'+i+'" aria-label="Remove last set">– set</button>':'')+(n<MAX_SETS?'<button type="button" data-addset="'+i+'" aria-label="Add a set">+ set</button>':'')+'</div>'
@@ -246,10 +280,12 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
     }).join('');
     el.innerHTML=
       '<div class="card-head"><span class="eyebrow">Workout</span><input type="date" id="sess-date" value="'+esc(sess.date)+'" aria-label="Workout date"></div>'
-      +'<div class="cols"><div class="h exh">Exercise</div><div class="h num">Set</div><div class="h num">Reps</div><div class="h num">Weight ('+unit+')</div><div></div>'+rows+'</div>'
-      +'<div class="actions"><button type="button" class="btn primary" id="add-ex">+ Add exercise</button><button type="button" class="btn" id="new-sess">New workout</button><button type="button" class="btn danger" id="del-sess">Delete</button></div>'
+      +'<div class="cols"><div class="h exh">Exercise</div><div class="h num">Set</div><div class="h num">Reps</div><div class="h num">Weight ('+su+')</div><div></div>'+rows+'</div>'
+      +'<div class="actions"><button type="button" class="btn primary" id="add-ex">+ Add exercise</button>'
+      +(lastSession(currentId)?'<button type="button" class="btn" id="repeat-sess" title="Start a new workout with the same exercises as last time">Repeat last</button>':'')
+      +'<button type="button" class="btn" id="new-sess">New workout</button><button type="button" class="btn danger" id="del-sess">Delete</button></div>'
       +(confirmDelete?'<div class="confirm" id="confirm">Delete this workout for good?<button type="button" class="btn danger" id="del-yes">Delete</button><button type="button" class="btn" id="del-no">Keep</button></div>':'')
-      +'<div class="foot"><span class="vol">Volume <b id="vol">'+volume(sess).toLocaleString()+'</b> '+unit+'</span><span class="status '+status.kind+'" id="status">'+esc(status.text)+'</span></div>';
+      +'<div class="foot"><span class="vol">Volume <b id="vol">'+volume(sess).toLocaleString()+'</b> '+su+'</span><span class="status '+status.kind+'" id="status">'+esc(status.text)+'</span></div>';
   }
   function renderHistory(){
     const ids=sortedIds().filter(id=>hasContent(sessions[id])||id===currentId);
@@ -257,7 +293,7 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
     if(!ids.length){ $('#hist').innerHTML='<li class="empty" style="border:0;background:none">Your first workout will appear here once you log a set.</li>'; return }
     $('#hist').innerHTML=ids.map(id=>{const s=sessions[id];const ex=(s.exercises||[]).filter(e=>e.name.trim());
       return '<li class="'+(id===currentId?'active':'')+'"><button type="button" class="open" data-open="'+id+'">'
-        +'<div class="d"><b>'+esc(fmtDate(s.date))+'</b><span>'+ex.length+' ex · '+volume(s).toLocaleString()+' '+unit+'</span></div>'
+        +'<div class="d"><b>'+esc(fmtDate(s.date))+'</b><span>'+ex.length+' ex · '+volume(s).toLocaleString()+' '+sessUnit(s)+'</span></div>'
         +(ex.length?'<div class="lines">'+ex.map(e=>'<div><span>'+esc(e.name)+'</span><span>'+e.sets.map(fmtSet).join(' · ')+'</span></div>').join('')+'</div>':'<div class="lines"><div><span style="color:var(--muted)">Empty workout</span></div></div>')
         +'</button></li>'}).join('');
   }
@@ -269,7 +305,8 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
     if(t.id==='sess-date'){ if(t.value){sess.date=t.value; scheduleSave(currentId); renderHistory()} return }
     const ex=t.closest('.ex'); if(!ex) return;
     const e=sess.exercises[+ex.dataset.i]; if(!e) return;
-    if(t.dataset.f==='name'){ e.name=t.value; const last=lastFor(e.name,currentId); ex.querySelector('.last').textContent=last?'Last: '+last.sets.map(fmtSet).join(' · '):''; }
+    if(t.dataset.f==='name'){ e.name=t.value; const last=lastFor(e.name,currentId), su=sessUnit(sess); ex.querySelector('.last').textContent=lastText(last,su);
+      e.sets.forEach((s,k)=>{ const r=ex.querySelector('[data-f=reps][data-k="'+k+'"]'), w=ex.querySelector('[data-f=weight][data-k="'+k+'"]'); if(r) r.placeholder=phReps(last,k); if(w) w.placeholder=phWeight(last,k,su); }); }
     else { const v=t.value===''?null:+t.value; e.sets[+t.dataset.k][t.dataset.f]=isNaN(v)?null:v; $('#vol').textContent=volume(sess).toLocaleString(); }
     scheduleSave(currentId); renderHistory();
   });
@@ -281,6 +318,7 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
     else if(b.dataset.delset!=null){ const e=sess.exercises[+b.dataset.delset]; if(e&&e.sets.length>1){ const last=e.sets[e.sets.length-1]; if(last.reps!=null||last.weight!=null){ toast('Clear set '+e.sets.length+' first, then remove it'); return } e.sets.pop(); scheduleSave(currentId); renderEditor(); renderHistory(); } }
     else if(b.dataset.rm!=null){ sess.exercises.splice(+b.dataset.rm,1); if(!sess.exercises.length) sess.exercises.push(blankEx()); scheduleSave(currentId); renderEditor(); renderHistory(); }
     else if(b.id==='new-sess'){ openNew(); }
+    else if(b.id==='repeat-sess'){ openRepeat(); }
     else if(b.id==='del-sess'){ confirmDelete=true; renderEditor(); }
     else if(b.id==='del-no'){ confirmDelete=false; renderEditor(); }
     else if(b.id==='del-yes'){ const id=currentId; confirmDelete=false; clearTimeout(timers[id]); dirty[id]=false; delete sessions[id];
@@ -297,9 +335,28 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
     currentId=uid(); sessions[currentId]=blankSession(); confirmDelete=false; renderAll();
     const inp=document.getElementById('ex-0-name'); if(inp) inp.focus();
   }
-  function setUnit(u){ unit=u; try{localStorage.setItem(UNIT_KEY,u)}catch(e){} $('#unit-kg').setAttribute('aria-pressed',u==='kg'); $('#unit-lb').setAttribute('aria-pressed',u==='lb'); if(store) renderAll(); }
+  function openRepeat(){
+    const src=lastSession(currentId); if(!src){ openNew(); return }
+    if(currentId&&sessions[currentId]&&!hasContent(sessions[currentId])) delete sessions[currentId];
+    currentId=uid(); sessions[currentId]=repeatSession(src); confirmDelete=false; scheduleSave(currentId); renderAll();
+    const inp=document.getElementById('ex-0-r0'); if(inp) inp.focus();
+    toast('Same exercises as '+fmtDate(src.date)+' — fill in today\'s sets');
+  }
+  /* The kg/lb toggle shows the open workout's unit. Tapping it converts that workout and becomes the default for new ones. */
+  function syncUnitToggle(u){ $('#unit-kg').setAttribute('aria-pressed',u==='kg'); $('#unit-lb').setAttribute('aria-pressed',u==='lb'); }
+  function setUnit(u){
+    unit=u; try{localStorage.setItem(UNIT_KEY,u)}catch(e){}
+    const sess=sessions[currentId];
+    if(sess&&sessUnit(sess)!==u){
+      const from=sessUnit(sess); let n=0;
+      sess.exercises.forEach(e=>e.sets.forEach(s=>{ if(s.weight!=null){ s.weight=convertW(s.weight,from,u); n++ } }));
+      sess.unit=u; scheduleSave(currentId);
+      if(n) toast('Converted this workout to '+u);
+    }
+    syncUnitToggle(u); if(store) renderAll();
+  }
   $('#unit-kg').onclick=()=>setUnit('kg'); $('#unit-lb').onclick=()=>setUnit('lb');
-  setUnit(unit);
+  syncUnitToggle(unit);
   function setDefaultSets(n){ defaultSets=n; try{localStorage.setItem(SETS_KEY,String(n))}catch(e){}
     document.querySelectorAll('#sets-seg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.sets===n));
     // An untouched exercise in the open workout follows the new default
@@ -348,27 +405,28 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
   $('#export-csv').onclick=()=>{
     const rows=[['date','exercise','set','reps','weight','unit']];
     for(const id of sortedIds().reverse()){ const s=sessions[id]; if(!hasContent(s)) continue;
-      (s.exercises||[]).forEach(e=>{ if(!e.name.trim()) return; e.sets.forEach((x,k)=>{ if(x.reps==null&&x.weight==null) return; rows.push([s.date,e.name.trim(),k+1,x.reps??'',x.weight??'',unit]) }) }) }
+      (s.exercises||[]).forEach(e=>{ if(!e.name.trim()) return; e.sets.forEach((x,k)=>{ if(x.reps==null&&x.weight==null) return; rows.push([s.date,e.name.trim(),k+1,x.reps??'',x.weight??'',sessUnit(s)]) }) }) }
     if(rows.length===1){ toast('Nothing to export yet'); return }
-    download('khanage-workouts-'+today()+'.csv',rows.map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv');
+    download('youfit-workouts-'+today()+'.csv',rows.map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv');
   };
   $('#backup').onclick=()=>{
     const data=localData(); const n=Object.keys(data).length;
     if(!n){ toast('Nothing to back up yet'); return }
-    download('khanage-backup-'+today()+'.json',JSON.stringify({app:'khanage',version:1,exported:new Date().toISOString(),unit,workouts:data},null,1),'application/json');
+    download('youfit-backup-'+today()+'.json',JSON.stringify({app:'youfit',version:1,exported:new Date().toISOString(),unit,workouts:data},null,1),'application/json');
     toast('Backup saved · '+n+(n===1?' workout':' workouts'));
   };
   $('#restore').onclick=()=>$('#restore-file').click();
   $('#restore-file').addEventListener('change',ev=>{
     const f=ev.target.files&&ev.target.files[0]; ev.target.value=''; if(!f) return;
     f.text().then(txt=>{
-      let j; try{ j=JSON.parse(txt) }catch(e){ toast('That file is not a Khanage backup'); return }
-      const w=j&&(j.app==='khanage'||j.app==='two-sets')&&j.workouts&&typeof j.workouts==='object'?j.workouts:null;
-      if(!w){ toast('That file is not a Khanage backup'); return }
-      for(const k in w){ (w[k].exercises||[]).forEach(e=>{ if(!Array.isArray(e.sets)||!e.sets.length) e.sets=[blankSet()]; }) }
+      let j; try{ j=JSON.parse(txt) }catch(e){ toast('That file is not a YouFit backup'); return }
+      const w=j&&(j.app==='youfit'||j.app==='khanage'||j.app==='two-sets')&&j.workouts&&typeof j.workouts==='object'?j.workouts:null; // older backups still restore
+      if(!w){ toast('That file is not a YouFit backup'); return }
+      const bu=j.unit==='lb'?'lb':'kg'; // older backups carry one unit for everything
+      for(const k in w){ if(!w[k].unit) w[k].unit=bu; (w[k].exercises||[]).forEach(e=>{ if(!Array.isArray(e.sets)||!e.sets.length) e.sets=[blankSet()]; }) }
       const merged=Object.assign({},localData(),w); // keeps what is on this device, adds the backup
       store.replaceAll(merged); sessions={}; currentId=null; dirty={}; saving={}; booted=false;
-      onData(merged); toast('Restored · '+Object.keys(w).length+' workouts');
+      const n=Object.keys(w).length; onData(merged); toast('Restored · '+n+(n===1?' workout':' workouts'));
     });
   });
 
@@ -376,9 +434,26 @@ h1 small{display:block;font:600 12px/1 var(--body);color:var(--muted);text-trans
   let installEvt=null;
   window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; $('#install').hidden=false; });
   $('#install').onclick=async()=>{ if(!installEvt) return; installEvt.prompt(); const r=await installEvt.userChoice; if(r&&r.outcome==='accepted'){ $('#install').hidden=true; installEvt=null; } };
-  window.addEventListener('appinstalled',()=>{ $('#install').hidden=true; toast('Installed — find Khanage on your home screen'); });
+  window.addEventListener('appinstalled',()=>{ $('#install').hidden=true; toast('Installed — find YouFit on your home screen'); });
+  /* A new version is fetched in the background; offer a reload instead of forcing one mid-workout. */
+  function showUpdate(){
+    if($('#upd')) return;
+    const t=document.createElement('div'); t.id='upd'; t.className='toast upd';
+    t.innerHTML='<span>YouFit has been updated</span><button type="button" id="upd-go">Reload</button><button type="button" id="upd-later" aria-label="Later">×</button>';
+    document.body.appendChild(t);
+    $('#upd-go').onclick=()=>{ Object.keys(timers).forEach(id=>{ clearTimeout(timers[id]); if(dirty[id]) flush(id) }); setTimeout(()=>location.reload(),150); };
+    $('#upd-later').onclick=()=>t.remove();
+  }
   if('serviceWorker' in navigator && location.protocol!=='file:'){
-    window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('sw.js').then(reg=>{
+        const watch=w=>{ if(!w) return; w.addEventListener('statechange',()=>{ if(w.state==='installed'&&navigator.serviceWorker.controller) showUpdate() }) };
+        watch(reg.installing);
+        reg.addEventListener('updatefound',()=>watch(reg.installing));
+        // Installed apps stay open for days: look for a new version whenever the app comes back to the front
+        document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') reg.update().catch(()=>{}) });
+      }).catch(()=>{});
+    });
   }
 })();
 </script>
