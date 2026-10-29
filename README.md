@@ -28,4 +28,4 @@ A phone-first workout logger: two sets per exercise by default — set 3, 4 or 5
 
 ## Updating the app
 
-Edit the files, bump `CACHE` in `sw.js` (e.g. `youfit-v4`), and push. Phones that already have the app show a Reload prompt the next time it is opened or brought to the front.
+Edit the files, bump `CACHE` in `sw.js` (e.g. `youfit-v5`), and push. Phones that already have the app show a Reload prompt the next time it is opened or brought to the front.
