@@ -116,6 +116,10 @@ h1 small{display:block;font:700 11px/1 var(--body);color:var(--muted);text-trans
 .hist .lines{margin-top:8px;display:grid;gap:3px;font-size:14px}
 .hist .lines div{display:flex;justify-content:space-between;gap:10px}
 .hist .lines div span:last-child{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Personal records: the set that beat every earlier workout for that exercise */
+input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:800}
+.hist .lines b.pr{color:var(--accent);margin-left:2px}
+.toast.pr{background:var(--accent);color:var(--accent-fg);font-weight:700;padding:12px 16px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.25)}
 .empty{color:var(--muted);font-size:14px;padding:14px;text-align:center;border:1px dashed var(--line);border-radius:10px;margin-top:10px}
 .note{font-size:13px;color:var(--muted);margin-top:10px}
 .data{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;align-items:center}
@@ -208,6 +212,29 @@ h1 small{display:block;font:700 11px/1 var(--body);color:var(--muted);text-trans
   const hasContent=sess=>(sess.exercises||[]).some(e=>e.name.trim()||e.sets.some(s=>s.reps!=null||s.weight!=null));
   const lastSession=excludeId=>{ for(const id of sortedIds()){ if(id!==excludeId&&hasContent(sessions[id])) return sessions[id] } return null };
 
+  /* ---------- personal records ---------- */
+  const toKg=(w,u)=>u==='lb'?w/2.20462:w;
+  const earlier=(a,b)=>((a.date||'')<(b.date||''))||((a.date||'')===(b.date||'')&&(a.createdAt||0)<(b.createdAt||0));
+  // Best weight (and best reps for bodyweight sets) for an exercise across the workouts before this one
+  function bestBefore(name,sess){
+    const n=name.trim().toLowerCase(); let bestW=null,bestR=null; if(!n) return {bestW,bestR};
+    for(const id in sessions){ const s=sessions[id]; if(s===sess||!earlier(s,sess)) continue;
+      for(const e of s.exercises||[]){ if(e.name.trim().toLowerCase()!==n) continue;
+        for(const x of e.sets){ if(x.weight!=null&&x.weight>0){ const kg=toKg(x.weight,sessUnit(s)); if(bestW==null||kg>bestW) bestW=kg } else if(x.reps!=null&&x.reps>0&&(bestR==null||x.reps>bestR)) bestR=x.reps } } }
+    return {bestW,bestR};
+  }
+  // A set is a PR when it beats every earlier workout for that exercise. The first time you ever log a lift is not a PR.
+  function isPR(sess,e,x,b){ b=b||bestBefore(e.name,sess);
+    if(x.weight!=null&&x.weight>0) return b.bestW!=null&&toKg(x.weight,sessUnit(sess))>b.bestW+1e-6;
+    if(x.reps!=null&&x.reps>0&&x.weight==null) return b.bestR!=null&&x.reps>b.bestR;
+    return false }
+  const celebrated=new Set(); // one cheer per set while the page is open
+  function cheerPR(sess,i,k){ const e=sess.exercises[i], x=e.sets[k]; if(!isPR(sess,e,x)) return false;
+    const key=currentId+':'+i+':'+k; if(!celebrated.has(key)){ celebrated.add(key);
+      toast('🏆 New PR! Well done, you’re getting stronger — '+e.name.trim()+' '+(x.weight!=null?x.weight+' '+sessUnit(sess):x.reps+' reps'),4500,'pr');
+      if(navigator.vibrate) navigator.vibrate([40,60,40]); }
+    return true }
+
   /* ---------- storage backends ---------- */
   function localStore(){
     let data=localData();
@@ -266,14 +293,14 @@ h1 small{display:block;font:700 11px/1 var(--body);color:var(--muted);text-trans
     const rows=sess.exercises.map((e,i)=>{
       const last=lastFor(e.name,currentId);
       const lastTxt=lastText(last,su);
-      const n=e.sets.length;
+      const n=e.sets.length, best=bestBefore(e.name,sess);
       return '<div class="ex" data-i="'+i+'">'
         +'<div class="name" style="grid-row:span '+n+'"><input type="text" id="ex-'+i+'-name" list="exnames" placeholder="Exercise" autocomplete="off" value="'+esc(e.name)+'" data-f="name"><div class="last" title="'+esc(lastTxt)+'">'+esc(lastTxt)+'</div></div>'
-        +e.sets.map((s,k)=>'<div class="set">'+(k+1)+'</div>'
-          +'<input type="number" inputmode="numeric" min="0" step="1" id="ex-'+i+'-r'+k+'" placeholder="'+esc(phReps(last,k))+'" value="'+(s.reps??'')+'" data-f="reps" data-k="'+k+'">'
-          +'<input type="number" inputmode="decimal" min="0" step="any" id="ex-'+i+'-w'+k+'" placeholder="'+esc(phWeight(last,k,su))+'" value="'+(s.weight??'')+'" data-f="weight" data-k="'+k+'">'
+        +e.sets.map((s,k)=>{ const pr=isPR(sess,e,s,best)?' class="pr" title="Personal record"':''; return '<div class="set">'+(k+1)+'</div>'
+          +'<input type="number" inputmode="numeric" min="0" step="1" id="ex-'+i+'-r'+k+'" placeholder="'+esc(phReps(last,k))+'" value="'+(s.reps??'')+'" data-f="reps" data-k="'+k+'"'+pr+'>'
+          +'<input type="number" inputmode="decimal" min="0" step="any" id="ex-'+i+'-w'+k+'" placeholder="'+esc(phWeight(last,k,su))+'" value="'+(s.weight??'')+'" data-f="weight" data-k="'+k+'"'+pr+'>'
           +(k===0?'<button type="button" class="rm" style="grid-row:span '+n+'" data-rm="'+i+'" aria-label="Remove exercise" title="Remove exercise">×</button>':'')
-        ).join('')
+        }).join('')
         +'<div class="setctl">'+(n>1?'<button type="button" data-delset="'+i+'" aria-label="Remove last set">– set</button>':'')+(n<MAX_SETS?'<button type="button" data-addset="'+i+'" aria-label="Add a set">+ set</button>':'')+'</div>'
         +(i<sess.exercises.length-1?'<div class="divider"></div>':'')
         +'</div>';
@@ -294,7 +321,7 @@ h1 small{display:block;font:700 11px/1 var(--body);color:var(--muted);text-trans
     $('#hist').innerHTML=ids.map(id=>{const s=sessions[id];const ex=(s.exercises||[]).filter(e=>e.name.trim());
       return '<li class="'+(id===currentId?'active':'')+'"><button type="button" class="open" data-open="'+id+'">'
         +'<div class="d"><b>'+esc(fmtDate(s.date))+'</b><span>'+ex.length+' ex · '+volume(s).toLocaleString()+' '+sessUnit(s)+'</span></div>'
-        +(ex.length?'<div class="lines">'+ex.map(e=>'<div><span>'+esc(e.name)+'</span><span>'+e.sets.map(fmtSet).join(' · ')+'</span></div>').join('')+'</div>':'<div class="lines"><div><span style="color:var(--muted)">Empty workout</span></div></div>')
+        +(ex.length?'<div class="lines">'+ex.map(e=>{ const best=bestBefore(e.name,s); return '<div><span>'+esc(e.name)+'</span><span>'+e.sets.map(x=>fmtSet(x)+(isPR(s,e,x,best)?'<b class="pr" title="Personal record">★</b>':'')).join(' · ')+'</span></div>' }).join('')+'</div>':'<div class="lines"><div><span style="color:var(--muted)">Empty workout</span></div></div>')
         +'</button></li>'}).join('');
   }
   function renderAll(){ renderNames(); renderEditor(); renderHistory(); }
@@ -306,8 +333,11 @@ h1 small{display:block;font:700 11px/1 var(--body);color:var(--muted);text-trans
     const ex=t.closest('.ex'); if(!ex) return;
     const e=sess.exercises[+ex.dataset.i]; if(!e) return;
     if(t.dataset.f==='name'){ e.name=t.value; const last=lastFor(e.name,currentId), su=sessUnit(sess); ex.querySelector('.last').textContent=lastText(last,su);
-      e.sets.forEach((s,k)=>{ const r=ex.querySelector('[data-f=reps][data-k="'+k+'"]'), w=ex.querySelector('[data-f=weight][data-k="'+k+'"]'); if(r) r.placeholder=phReps(last,k); if(w) w.placeholder=phWeight(last,k,su); }); }
-    else { const v=t.value===''?null:+t.value; e.sets[+t.dataset.k][t.dataset.f]=isNaN(v)?null:v; $('#vol').textContent=volume(sess).toLocaleString(); }
+      const best=bestBefore(e.name,sess);
+      e.sets.forEach((s,k)=>{ const r=ex.querySelector('[data-f=reps][data-k="'+k+'"]'), w=ex.querySelector('[data-f=weight][data-k="'+k+'"]'); if(r) r.placeholder=phReps(last,k); if(w) w.placeholder=phWeight(last,k,su);
+        const pr=isPR(sess,e,s,best); [r,w].forEach(n=>{ if(n){ n.classList.toggle('pr',pr); n.title=pr?'Personal record':'' } }); }); }
+    else { const v=t.value===''?null:+t.value; const k=+t.dataset.k; e.sets[k][t.dataset.f]=isNaN(v)?null:v; $('#vol').textContent=volume(sess).toLocaleString();
+      const pr=cheerPR(sess,+ex.dataset.i,k); ex.querySelectorAll('[data-k="'+k+'"]').forEach(n=>{ n.classList.toggle('pr',pr); n.title=pr?'Personal record':'' }); }
     scheduleSave(currentId); renderHistory();
   });
   $('#editor').addEventListener('click',ev=>{
@@ -395,7 +425,7 @@ h1 small{display:block;font:700 11px/1 var(--body);color:var(--muted);text-trans
   start();
 
   /* ---------- export / backup / restore ---------- */
-  function toast(msg){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)} t.textContent=msg; clearTimeout(toast.t); toast.t=setTimeout(()=>t.remove(),2600); }
+  function toast(msg,ms,cls){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t)} t.className='toast'+(cls?' '+cls:''); t.textContent=msg; clearTimeout(toast.t); toast.t=setTimeout(()=>t.remove(),ms||2600); }
   function download(name,text,type){
     const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();

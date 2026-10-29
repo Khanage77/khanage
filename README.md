@@ -4,6 +4,7 @@ A phone-first workout logger: two sets per exercise by default — set 3, 4 or 5
 
 - **Repeat last** starts a new workout with the same exercises and set counts as your previous one; last time's reps and weights show faintly in each box so you can match or beat them.
 - **kg / lb** is remembered per workout. Tapping the toggle converts the open workout and becomes the default for new ones; older workouts keep the unit they were logged in.
+- **Personal records**: when a set beats your best ever weight (or reps, for bodyweight moves) for that exercise, you get a "New PR!" cheer, the set turns green, and it is starred in History.
 - When a new version is published, the app shows a **Reload** prompt instead of silently waiting for the next open.
 
 ## Deploy on GitHub Pages (free)
@@ -27,4 +28,4 @@ A phone-first workout logger: two sets per exercise by default — set 3, 4 or 5
 
 ## Updating the app
 
-Edit the files, bump `CACHE` in `sw.js` (e.g. `youfit-v3`), and push. Phones that already have the app show a Reload prompt the next time it is opened or brought to the front.
+Edit the files, bump `CACHE` in `sw.js` (e.g. `youfit-v4`), and push. Phones that already have the app show a Reload prompt the next time it is opened or brought to the front.
