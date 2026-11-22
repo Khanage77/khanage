@@ -138,6 +138,47 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
 .toast.upd button{color:var(--bg);font-weight:600;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,.14)}
 .toast.upd #upd-go{background:var(--accent);color:var(--accent-fg)}
 @media (prefers-reduced-motion:no-preference){ .hist li,.btn{transition:border-color .15s,background .15s} }
+
+/* Progress tab: weekly targets, body weight and measurements */
+.tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface);font-weight:700;font-size:14px}
+.tabs button{padding:9px 12px;color:var(--muted)}
+.tabs button[aria-pressed=true]{background:var(--accent);color:var(--accent-fg)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.row input{flex:1 1 90px}
+.row input[type=date]{flex:1 1 130px}
+.fld{flex:1 1 90px;display:grid;gap:4px;font:600 11px/1 var(--body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);min-width:0}
+.fld input{text-transform:none;letter-spacing:0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;text-align:center}
+.stats div{background:var(--surface-2);border-radius:10px;padding:10px 4px}
+.stats b{display:block;font:800 22px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.stats div:first-child b{color:var(--accent)}
+.stats span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.bar{height:12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden;margin-top:12px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-2));border-radius:999px}
+.tally{margin-top:12px;font-size:14px;color:var(--muted)}
+.tally b{font:800 26px/1 var(--display);color:var(--accent)}
+.goal{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.goal .g-name{flex:1;min-width:0}
+.goal .g-name b{display:block}
+.goal .g-name small{color:var(--muted);font-size:12px}
+.goal.done .g-name b{color:var(--accent)}
+.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--line)}
+.dots i.on{background:var(--brand);border-color:var(--brand)}
+.step{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-weight:800;font-size:18px;line-height:1;flex:none}
+.step.add{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent)}
+.log{list-style:none;margin:12px 0 0;padding:0;font-size:14px}
+.log li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.log li span:first-child{min-width:0}
+.log .delta{color:var(--muted);font-size:12px;margin-left:6px}
+.log .x{color:var(--muted);font-size:13px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.log .x.sure{color:var(--danger);background:var(--surface-2)}
+.mgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:12px}
+.mgrid label{font:600 10px/1 var(--body);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);display:grid;gap:4px;text-align:center}
+.chart{display:block;width:100%;height:auto;margin-top:12px}
+.chart text{font:600 10px var(--body);fill:var(--muted)}
+.setting .fld{flex:0 0 62px}
+#targets>span{width:100%}
 </style>
 
 <div class="wrap">
@@ -161,15 +202,28 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     </div></div>
   </header>
 
-  <section class="card" id="editor" aria-live="polite">
-    <div class="empty">Connecting…</div>
-  </section>
-
-  <div class="hist-head">
-    <h2>History</h2>
-    <span class="eyebrow" id="hist-count"></span>
+  <div class="tabs" role="group" aria-label="View">
+    <button type="button" id="tab-workouts" aria-pressed="true">Workouts</button>
+    <button type="button" id="tab-progress" aria-pressed="false">Progress</button>
   </div>
-  <ul class="hist" id="hist"></ul>
+
+  <div id="view-workouts">
+    <section class="card" id="editor" aria-live="polite">
+      <div class="empty">Connecting…</div>
+    </section>
+
+    <div class="hist-head">
+      <h2>History</h2>
+      <span class="eyebrow" id="hist-count"></span>
+    </div>
+    <ul class="hist" id="hist"></ul>
+  </div>
+
+  <div id="view-progress" hidden>
+    <section class="card" id="week"></section>
+    <section class="card" id="weight"></section>
+    <section class="card" id="measure"></section>
+  </div>
 
   <div class="data">
     <span class="eyebrow">Settings</span>
@@ -177,15 +231,22 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
       <div class="seg" role="group" aria-label="Default sets per exercise" id="sets-seg">
         <button type="button" data-sets="2">2</button><button type="button" data-sets="3">3</button><button type="button" data-sets="4">4</button><button type="button" data-sets="5">5</button>
       </div></div>
+    <div class="setting" id="targets"><span>Weekly targets</span>
+      <label class="fld">Strength<input type="number" inputmode="numeric" min="0" max="14" step="1" data-target="strength"></label>
+      <label class="fld">Hikes<input type="number" inputmode="numeric" min="0" max="14" step="1" data-target="hike"></label>
+      <label class="fld">Pilates<input type="number" inputmode="numeric" min="0" max="14" step="1" data-target="pilates"></label>
+      <label class="fld">Hike min<input type="number" inputmode="numeric" min="0" max="600" step="5" data-target="hikeMins"></label>
+    </div>
   </div>
   <div class="data">
     <span class="eyebrow">Your data</span>
-    <button type="button" class="btn" id="export-csv">Export CSV</button>
+    <button type="button" class="btn" id="export-csv">Workouts CSV</button>
+    <button type="button" class="btn" id="export-progress">Progress CSV</button>
     <button type="button" class="btn" id="backup">Backup</button>
     <button type="button" class="btn" id="restore">Restore</button>
     <input type="file" id="restore-file" accept="application/json,.json" hidden>
   </div>
-  <p class="note">Each phone keeps its own workouts; nothing is shared or uploaded. Take a backup before changing phones or clearing browser data.</p>
+  <p class="note">Each phone keeps its own workouts, weigh-ins and measurements; nothing is shared or uploaded. Take a backup before changing phones or clearing browser data.</p>
   <datalist id="exnames"></datalist>
 </div>
 
@@ -393,6 +454,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
       if(n) toast('Converted this workout to '+u);
     }
     syncUnitToggle(u); if(store) renderAll();
+    if(!$('#view-progress').hidden) renderProgress();
   }
   $('#unit-kg').onclick=()=>setUnit('kg'); $('#unit-lb').onclick=()=>setUnit('lb');
   syncUnitToggle(unit);
@@ -403,6 +465,140 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
   }
   $('#sets-seg').addEventListener('click',ev=>{ const b=ev.target.closest('[data-sets]'); if(b) setDefaultSets(+b.dataset.sets); });
   setDefaultSets(defaultSets);
+
+  /* ---------- progress: weekly targets, body weight, measurements ----------
+     Kept under its own storage key so the workout data is untouched. Nothing personal is built in:
+     start weight, goal and targets are whatever the person using this phone enters. */
+  const BODY_KEY='youfit.body.v1';
+  const MEAS=[['waist','Waist'],['chest','Chest'],['hips','Hips'],['arm','Arm'],['thigh','Thigh']];
+  const ACTS=[['hike','Hike'],['pilates','Pilates']];
+  const blankBody=()=>({start:null,goal:null,targets:{strength:3,hike:2,pilates:2,hikeMins:45},weights:[],measures:[],acts:[]});
+  function normBody(b){ const d=blankBody(); if(!b||typeof b!=='object') return d;
+    const arr=a=>Array.isArray(a)?a.filter(x=>x&&typeof x.date==='string'&&x.date):[];
+    return {start:b.start&&b.start.w>0?b.start:null, goal:b.goal&&b.goal.w>0?b.goal:null, targets:Object.assign(d.targets,b.targets||{}), weights:arr(b.weights), measures:arr(b.measures), acts:arr(b.acts)} }
+  function loadBody(){ try{ return normBody(JSON.parse(localStorage.getItem(BODY_KEY)||'null')) }catch(e){ return blankBody() } }
+  let body=loadBody(), weekDate=today(), goalEdit=false, sure=null;
+  function saveBody(){ try{ localStorage.setItem(BODY_KEY,JSON.stringify(body)); return true }catch(e){ toast('This browser is not allowing storage.'); return false } }
+  const bodyHas=()=>!!(body.start||body.goal||body.weights.length||body.measures.length||body.acts.length);
+  const dOf=iso=>{ const [y,m,d]=iso.split('-').map(Number); return new Date(y,m-1,d) };
+  const isoOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const addDays=(iso,n)=>{ const d=dOf(iso); d.setDate(d.getDate()+n); return isoOf(d) };
+  const weekStart=iso=>addDays(iso,-((dOf(iso).getDay()+6)%7)); // weeks run Monday to Sunday
+  const shortDate=iso=>dOf(iso).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+  const axisDate=iso=>dOf(iso).toLocaleDateString(undefined,{month:'short',year:'numeric'});
+  const n1=v=>(Math.round(v*10)/10).toLocaleString(undefined,{maximumFractionDigits:1});
+  // Body weights remember the unit they were entered in and are shown in the unit currently selected
+  const bw=(v,u)=>u===unit?v:Math.round((u==='kg'?v*2.20462:v/2.20462)*10)/10;
+  const byDate=(a,b)=>a.date.localeCompare(b.date);
+  const num=el=>{ const v=el&&el.value!==''?+el.value:null; return v==null||isNaN(v)||v<=0?null:v };
+  const signed=v=>(v>0?'+':v<0?'−':'±')+n1(Math.abs(v));
+  const delBtn=key=>'<button type="button" class="x'+(sure===key?' sure':'')+'" data-del="'+key+'" aria-label="Delete entry">'+(sure===key?'Delete?':'×')+'</button>';
+
+  function renderWeek(){
+    const ws=weekStart(weekDate), we=addDays(ws,6), inWk=d=>d>=ws&&d<=we, t=body.targets;
+    const sDays=new Set(); for(const id in sessions){ const s=sessions[id]; if(hasContent(s)&&inWk(s.date||'')) sDays.add(s.date) }
+    const acts=k=>body.acts.filter(a=>a.type===k&&inWk(a.date));
+    const dots=(n,target)=>'<div class="dots" aria-hidden="true">'+Array.from({length:Math.max(target,n)},(_,i)=>'<i class="'+(i<n?'on':'')+'"></i>').join('')+'</div>';
+    let done=Math.min(sDays.size,t.strength), total=t.strength;
+    let rows='<div class="goal'+(t.strength&&sDays.size>=t.strength?' done':'')+'"><div class="g-name"><b>Strength '+sDays.size+' / '+t.strength+'</b><small>Counted from your logged workouts</small></div>'+dots(sDays.size,t.strength)+'</div>';
+    ACTS.forEach(([k,label])=>{ const a=acts(k), n=a.length, mins=a.reduce((s,x)=>s+(+x.mins||0),0); done+=Math.min(n,t[k]); total+=t[k];
+      rows+='<div class="goal'+(t[k]&&n>=t[k]?' done':'')+'"><div class="g-name"><b>'+label+' '+n+' / '+t[k]+'</b><small>'+(mins?mins+' min this week':(k==='hike'&&t.hikeMins?t.hikeMins+' min each':'Tap + after each class'))+'</small></div>'+dots(n,t[k])
+        +'<button type="button" class="step" data-dec="'+k+'" aria-label="Remove a '+label.toLowerCase()+'"'+(n?'':' disabled')+'>−</button><button type="button" class="step add" data-inc="'+k+'" aria-label="Log a '+label.toLowerCase()+'">+</button></div>' });
+    $('#week').innerHTML='<div class="card-head"><span class="eyebrow">Week · '+esc(shortDate(ws))+' – '+esc(shortDate(we))+'</span><input type="date" id="week-date" value="'+esc(weekDate)+'" aria-label="Day to log for"></div>'
+      +'<div class="tally"><b>'+done+'</b> of '+total+' sessions done'+(total&&done>=total?' — target hit':'')+'</div>'+rows
+      +'<p class="note">Hikes and pilates are logged on the date shown above. Change the date to view or fill in another week.</p>';
+  }
+
+  function chart(pts,goal){ // pts: [{date,v}] in date order
+    if(pts.length<2) return '';
+    const W=320,H=140,L=34,R=10,T=10,B=20, t0=dOf(pts[0].date).getTime(), t1=dOf(pts[pts.length-1].date).getTime();
+    const vals=pts.map(p=>p.v).concat(goal!=null?[goal]:[]); let lo=Math.min(...vals), hi=Math.max(...vals); const pad=Math.max(1,(hi-lo)*0.08); lo-=pad; hi+=pad;
+    const x=d=>L+(t1===t0?0.5:(dOf(d).getTime()-t0)/(t1-t0))*(W-L-R), y=v=>T+(hi-v)/(hi-lo)*(H-T-B), f=n=>n.toFixed(1);
+    const line=pts.map(p=>f(x(p.date))+','+f(y(p.v))).join(' '), last=pts[pts.length-1];
+    return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Body weight over time">'
+      +(goal!=null?'<line x1="'+L+'" x2="'+(W-R)+'" y1="'+f(y(goal))+'" y2="'+f(y(goal))+'" stroke="var(--brand)" stroke-width="1.5" stroke-dasharray="4 4"/><text x="'+(W-R)+'" y="'+f(y(goal)-4)+'" text-anchor="end">Goal '+n1(goal)+'</text>':'')
+      +'<polyline points="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'
+      +pts.map(p=>'<circle cx="'+f(x(p.date))+'" cy="'+f(y(p.v))+'" r="2.5" fill="var(--accent)"/>').join('')
+      +'<circle cx="'+f(x(last.date))+'" cy="'+f(y(last.v))+'" r="4.5" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.5"/>'
+      +'<text x="'+(L-6)+'" y="'+f(y(pts[0].v)+3)+'" text-anchor="end">'+n1(pts[0].v)+'</text>'
+      +(Math.abs(y(last.v)-y(pts[0].v))>12?'<text x="'+(L-6)+'" y="'+f(y(last.v)+3)+'" text-anchor="end">'+n1(last.v)+'</text>':'')
+      +'<text x="'+L+'" y="'+(H-5)+'">'+esc(axisDate(pts[0].date))+'</text><text x="'+(W-R)+'" y="'+(H-5)+'" text-anchor="end">'+esc(axisDate(last.date))+'</text></svg>';
+  }
+  function renderWeight(){
+    const ws=body.weights.slice().sort(byDate), last=ws[ws.length-1], s=body.start, g=body.goal;
+    const cur=last?bw(last.w,last.unit):(s?bw(s.w,s.unit):null), setup=!(s&&g);
+    let h='<div class="card-head"><span class="eyebrow">Body weight</span>'+(setup?'':'<button type="button" class="btn sm" id="goal-edit">'+(goalEdit?'Close':'Edit goal')+'</button>')+'</div>';
+    if(setup||goalEdit) h+=(setup?'<p class="note">Enter where you started and where you are heading to see your progress.</p>':'')
+      +'<div class="row"><label class="fld">Start ('+unit+')<input type="number" inputmode="decimal" min="0" step="any" id="g-start" value="'+(s?bw(s.w,s.unit):'')+'"></label>'
+      +'<label class="fld">Goal ('+unit+')<input type="number" inputmode="decimal" min="0" step="any" id="g-goal" value="'+(g?bw(g.w,g.unit):'')+'"></label>'
+      +'<label class="fld">Start date<input type="date" id="g-date" value="'+esc(s&&s.date||'')+'"></label></div>'
+      +'<div class="actions"><button type="button" class="btn primary" id="goal-save">Save goal</button></div>';
+    if(!setup&&cur!=null){ const sv=bw(s.w,s.unit), gv=bw(g.w,g.unit), total=sv-gv, dir=total>=0?1:-1, moved=(sv-cur)*dir;
+      const pct=total?Math.max(0,Math.min(100,(sv-cur)/total*100)):0, left=Math.max(0,(cur-gv)*dir);
+      const word=(moved>=0)===(dir>0)?'Lost':'Gained';
+      h+='<div class="stats"><div><b>'+n1(cur)+'</b><span>Now ('+unit+')</span></div><div><b>'+n1(Math.abs(moved))+'</b><span>'+word+'</span></div><div><b>'+n1(left)+'</b><span>To go</span></div></div>'
+        +'<div class="bar" role="progressbar" aria-label="Progress to goal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'"><i style="width:'+pct.toFixed(1)+'%"></i></div>'
+        +'<p class="note">'+Math.round(pct)+'% of the way from '+n1(sv)+' to '+n1(gv)+' '+unit+'</p>'; }
+    h+='<div class="row"><input type="date" id="w-date" value="'+today()+'" aria-label="Weigh-in date"><input type="number" inputmode="decimal" min="0" step="any" id="w-val" placeholder="Weight ('+unit+')" aria-label="Weight"><button type="button" class="btn primary" id="w-add">Log weight</button></div>';
+    const pts=ws.map(w=>({date:w.date,v:bw(w.w,w.unit)}));
+    if(s&&s.date&&(!pts.length||s.date<pts[0].date)) pts.unshift({date:s.date,v:bw(s.w,s.unit)});
+    h+=chart(pts,g?bw(g.w,g.unit):null);
+    if(ws.length) h+='<ul class="log">'+ws.slice(-8).reverse().map(w=>{ const i=ws.indexOf(w), prev=i>0?ws[i-1]:null, d=prev?bw(w.w,w.unit)-bw(prev.w,prev.unit):null;
+      return '<li><span>'+esc(fmtDate(w.date))+'</span><span><b>'+n1(bw(w.w,w.unit))+' '+unit+'</b>'+(d!=null?'<span class="delta">'+signed(d)+'</span>':'')+delBtn('w:'+w.date)+'</span></li>' }).join('')+'</ul>'
+      +(ws.length>8?'<p class="note">Showing the latest 8 of '+ws.length+' weigh-ins. Progress CSV has them all.</p>':'');
+    $('#weight').innerHTML=h;
+  }
+  function renderMeasure(){
+    const ms=body.measures.slice().sort(byDate);
+    const latest=k=>{ for(let i=ms.length-1;i>=0;i--) if(ms[i][k]!=null) return ms[i]; return null };
+    const first=k=>{ for(const m of ms) if(m[k]!=null) return m; return null };
+    let h='<div class="card-head"><span class="eyebrow">Measurements (cm)</span><input type="date" id="m-date" value="'+today()+'" aria-label="Measurement date"></div>'
+      +'<div class="mgrid">'+MEAS.map(([k,label])=>{ const l=latest(k); return '<label>'+label+'<input type="number" inputmode="decimal" min="0" step="any" id="m-'+k+'" placeholder="'+(l?n1(l[k]):'–')+'"></label>' }).join('')+'</div>'
+      +'<div class="actions"><button type="button" class="btn primary" id="m-add">Save measurements</button></div>';
+    const sum=MEAS.map(([k,label])=>{ const l=latest(k), f=first(k); if(!l) return '';
+      return '<li><span>'+label+'</span><span><b>'+n1(l[k])+' cm</b>'+(f!==l?'<span class="delta">'+signed(l[k]-f[k])+' since '+esc(shortDate(f.date))+'</span>':'')+'</span></li>' }).join('');
+    if(sum) h+='<ul class="log">'+sum+'</ul>';
+    if(ms.length) h+='<p class="note" style="margin-top:14px">Entries</p><ul class="log" style="margin-top:4px">'+ms.slice(-6).reverse().map(m=>'<li><span>'+esc(fmtDate(m.date))+'<span class="delta">'+MEAS.filter(([k])=>m[k]!=null).map(([k,label])=>label[0]+' '+n1(m[k])).join(' · ')+'</span></span>'+delBtn('m:'+m.date)+'</li>').join('')+'</ul>';
+    $('#measure').innerHTML=h;
+  }
+  function renderProgress(){ renderWeek(); renderWeight(); renderMeasure(); }
+  function showTab(t){ const p=t==='progress'; $('#view-workouts').hidden=p; $('#view-progress').hidden=!p;
+    $('#tab-workouts').setAttribute('aria-pressed',!p); $('#tab-progress').setAttribute('aria-pressed',p); sure=null; if(p) renderProgress(); }
+  $('#tab-workouts').onclick=()=>showTab('workouts'); $('#tab-progress').onclick=()=>showTab('progress');
+
+  $('#view-progress').addEventListener('change',ev=>{ if(ev.target.id==='week-date'&&ev.target.value){ weekDate=ev.target.value; renderWeek() } });
+  $('#view-progress').addEventListener('click',ev=>{
+    const b=ev.target.closest('button'); if(!b) return;
+    if(b.dataset.inc){ const k=b.dataset.inc; body.acts.push({id:uid(),type:k,date:weekDate,mins:k==='hike'&&body.targets.hikeMins?body.targets.hikeMins:null}); saveBody(); renderWeek(); }
+    else if(b.dataset.dec){ const ws=weekStart(weekDate), we=addDays(ws,6), k=b.dataset.dec;
+      const inWk=body.acts.filter(a=>a.type===k&&a.date>=ws&&a.date<=we).sort(byDate); // the one on the chosen day first, else the latest that week
+      const hit=inWk.filter(a=>a.date===weekDate).pop()||inWk.pop(); if(hit){ body.acts.splice(body.acts.indexOf(hit),1); saveBody(); renderWeek(); } }
+    else if(b.id==='goal-edit'){ goalEdit=!goalEdit; renderWeight(); }
+    else if(b.id==='goal-save'){ const sv=num($('#g-start')), gv=num($('#g-goal')), d=$('#g-date').value||null;
+      if(sv==null||gv==null){ toast('Enter both a start and a goal weight'); return }
+      body.start={w:sv,unit,date:d}; body.goal={w:gv,unit}; goalEdit=false; saveBody(); renderWeight(); toast('Goal saved'); }
+    else if(b.id==='w-add'){ const v=num($('#w-val')), d=$('#w-date').value; if(v==null||!d){ toast('Enter a date and a weight'); return }
+      body.weights=body.weights.filter(w=>w.date!==d); body.weights.push({date:d,w:v,unit}); saveBody(); renderWeight(); toast('Weigh-in saved · '+n1(v)+' '+unit); } // one weigh-in per day: a second one replaces the first
+    else if(b.id==='m-add'){ const d=$('#m-date').value; if(!d){ toast('Pick a date'); return }
+      const e=body.measures.find(m=>m.date===d)||{date:d}; let n=0; MEAS.forEach(([k])=>{ const v=num($('#m-'+k)); if(v!=null){ e[k]=v; n++ } });
+      if(!n){ toast('Enter at least one measurement'); return }
+      if(!body.measures.includes(e)) body.measures.push(e); saveBody(); renderMeasure(); toast('Measurements saved'); } // same day: fills in or overwrites just the boxes you typed in
+    else if(b.dataset.del){ const key=b.dataset.del, [kind,d]=[key[0],key.slice(2)];
+      if(sure!==key){ sure=key; } else { sure=null; if(kind==='w') body.weights=body.weights.filter(w=>w.date!==d); else body.measures=body.measures.filter(m=>m.date!==d); saveBody(); toast('Entry deleted'); }
+      if(kind==='w') renderWeight(); else renderMeasure(); }
+  });
+  const tInputs=()=>document.querySelectorAll('#targets [data-target]');
+  function syncTargets(){ tInputs().forEach(i=>{ i.value=body.targets[i.dataset.target] }) }
+  $('#targets').addEventListener('change',ev=>{ const i=ev.target.closest('[data-target]'); if(!i) return;
+    const v=Math.max(0,Math.min(+i.max||99,Math.round(+i.value||0))); body.targets[i.dataset.target]=v; i.value=v; saveBody(); if(!$('#view-progress').hidden) renderWeek(); });
+  syncTargets();
+  /* Restoring a backup adds to what is on this phone and never overwrites it */
+  function mergeBody(b){ b=normBody(b);
+    const add=(mine,theirs,key)=>{ const seen=new Set(mine.map(key)); theirs.forEach(x=>{ if(!seen.has(key(x))){ mine.push(x); seen.add(key(x)) } }) };
+    add(body.weights,b.weights,x=>x.date); add(body.measures,b.measures,x=>x.date); add(body.acts,b.acts,x=>x.id||x.type+x.date);
+    if(!body.start) body.start=b.start; if(!body.goal) body.goal=b.goal; if(!bodyHasTargets) body.targets=b.targets;
+    saveBody(); syncTargets(); if(!$('#view-progress').hidden) renderProgress(); }
+  let bodyHasTargets=false; try{ const raw=JSON.parse(localStorage.getItem(BODY_KEY)||'null'); bodyHasTargets=!!(raw&&raw.targets) }catch(e){}
 
   /* ---------- boot ---------- */
   function onData(remote){
@@ -448,11 +644,26 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     if(rows.length===1){ toast('Nothing to export yet'); return }
     download('youfit-workouts-'+today()+'.csv',rows.map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv');
   };
+  /* One row per entry, so the file drops straight into a spreadsheet or a chat for review */
+  $('#export-progress').onclick=()=>{
+    const rows=[];
+    if(body.start) rows.push([body.start.date||'','start weight',body.start.w,body.start.unit,'']);
+    if(body.goal) rows.push(['','goal weight',body.goal.w,body.goal.unit,'']);
+    body.weights.forEach(w=>rows.push([w.date,'weight',w.w,w.unit,'']));
+    body.measures.forEach(m=>MEAS.forEach(([k])=>{ if(m[k]!=null) rows.push([m.date,k,m[k],'cm','']) }));
+    body.acts.forEach(a=>rows.push([a.date,a.type,a.mins??'',a.mins!=null?'min':'','']));
+    const days={}; for(const id in sessions){ const s=sessions[id]; if(hasContent(s)&&s.date) days[s.date]=(days[s.date]||0)+(s.exercises||[]).filter(e=>e.name.trim()).length }
+    for(const d in days) rows.push([d,'strength',days[d],'exercises','']);
+    if(!rows.length){ toast('Nothing to export yet'); return }
+    rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0]))||String(a[1]).localeCompare(String(b[1])));
+    const t=body.targets; rows.push(['','weekly targets','','','strength '+t.strength+' / hike '+t.hike+' / pilates '+t.pilates]);
+    download('youfit-progress-'+today()+'.csv',[['date','type','value','unit','note']].concat(rows).map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv');
+  };
   $('#backup').onclick=()=>{
     const data=localData(); const n=Object.keys(data).length;
-    if(!n){ toast('Nothing to back up yet'); return }
-    download('youfit-backup-'+today()+'.json',JSON.stringify({app:'youfit',version:1,exported:new Date().toISOString(),unit,workouts:data},null,1),'application/json');
-    toast('Backup saved · '+n+(n===1?' workout':' workouts'));
+    if(!n&&!bodyHas()){ toast('Nothing to back up yet'); return }
+    download('youfit-backup-'+today()+'.json',JSON.stringify({app:'youfit',version:2,exported:new Date().toISOString(),unit,workouts:data,body},null,1),'application/json');
+    toast('Backup saved · '+n+(n===1?' workout':' workouts')+(bodyHas()?' + progress':''));
   };
   $('#restore').onclick=()=>$('#restore-file').click();
   $('#restore-file').addEventListener('change',ev=>{
@@ -465,7 +676,8 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
       for(const k in w){ if(!w[k].unit) w[k].unit=bu; (w[k].exercises||[]).forEach(e=>{ if(!Array.isArray(e.sets)||!e.sets.length) e.sets=[blankSet()]; }) }
       const merged=Object.assign({},localData(),w); // keeps what is on this device, adds the backup
       store.replaceAll(merged); sessions={}; currentId=null; dirty={}; saving={}; booted=false;
-      const n=Object.keys(w).length; onData(merged); toast('Restored · '+n+(n===1?' workout':' workouts'));
+      if(j.body) mergeBody(j.body);
+      const n=Object.keys(w).length; onData(merged); toast('Restored · '+n+(n===1?' workout':' workouts')+(j.body?' + progress':''));
     });
   });
 
