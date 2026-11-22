@@ -139,6 +139,8 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
 .toast.upd #upd-go{background:var(--accent);color:var(--accent-fg)}
 @media (prefers-reduced-motion:no-preference){ .hist li,.btn{transition:border-color .15s,background .15s} }
 
+.rout{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:13px;font-weight:700;color:var(--muted)}
+.rout .seg button{padding:7px 15px;font-size:14px}
 /* Progress tab: weekly targets, body weight and measurements */
 .tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface);font-weight:700;font-size:14px}
 .tabs button{padding:9px 12px;color:var(--muted)}
@@ -231,6 +233,10 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
       <div class="seg" role="group" aria-label="Default sets per exercise" id="sets-seg">
         <button type="button" data-sets="2">2</button><button type="button" data-sets="3">3</button><button type="button" data-sets="4">4</button><button type="button" data-sets="5">5</button>
       </div></div>
+    <div class="setting"><span>Save open workout as routine <span class="note" style="margin:0">(replaces that routine)</span></span>
+      <div class="seg" role="group" aria-label="Save open workout as routine" id="rout-save">
+        <button type="button" data-rsave="A">A</button><button type="button" data-rsave="B">B</button><button type="button" data-rsave="C">C</button><button type="button" data-rsave="D">D</button>
+      </div></div>
     <div class="setting" id="targets"><span>Weekly targets</span>
       <label class="fld">Strength<input type="number" inputmode="numeric" min="0" max="14" step="1" data-target="strength"></label>
       <label class="fld">Hikes<input type="number" inputmode="numeric" min="0" max="14" step="1" data-target="hike"></label>
@@ -274,13 +280,41 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
   const blankEx=()=>({name:'',sets:Array.from({length:defaultSets},blankSet)});
   const blankSession=()=>({date:today(),unit,exercises:[blankEx()],createdAt:Date.now()});
   /* Repeat: same exercises and set counts as the last logged workout, values left empty */
-  const repeatSession=src=>({date:today(),unit,createdAt:Date.now(),exercises:(src.exercises||[]).filter(e=>e.name.trim()).map(e=>({name:e.name.trim(),sets:Array.from({length:Math.max(1,e.sets.length)},blankSet)}))});
+  const repeatSession=src=>Object.assign({date:today(),unit,createdAt:Date.now(),exercises:(src.exercises||[]).filter(e=>e.name.trim()).map(e=>Object.assign({name:e.name.trim(),sets:Array.from({length:Math.max(1,e.sets.length)},blankSet)},e.target?{target:e.target}:{}))},src.routine?{routine:src.routine}:{});
+  /* A workout counts as done once at least one set has a number in it; a routine that was only opened does not */
+  const logged=sess=>(sess.exercises||[]).some(e=>e.sets.some(s=>s.reps!=null||s.weight!=null));
   const fmtDate=iso=>{const [y,m,d]=(iso||'').split('-').map(Number);if(!y)return iso||'';return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})};
   const fmtSet=s=>(s.reps??'–')+'×'+(s.weight??'–');
   const volume=sess=>(sess.exercises||[]).reduce((t,e)=>t+e.sets.reduce((u,s)=>u+((+s.reps||0)*(+s.weight||0)),0),0);
   const sortedIds=()=>Object.keys(sessions).sort((a,b)=>(sessions[b].date||'').localeCompare(sessions[a].date||'')||(sessions[b].createdAt||0)-(sessions[a].createdAt||0));
   const hasContent=sess=>(sess.exercises||[]).some(e=>e.name.trim()||e.sets.some(s=>s.reps!=null||s.weight!=null));
   const lastSession=excludeId=>{ for(const id of sortedIds()){ if(id!==excludeId&&hasContent(sessions[id])) return sessions[id] } return null };
+
+  /* ---------- routines: tap A, B, C or D and the workout is laid out for you ----------
+     The four built in are a full-body rotation; any of them can be replaced under Settings with the open workout. */
+  const ROUT_KEY='youfit.routines.v1', RT='8–12 reps';
+  const DEFAULT_ROUTINES={
+    A:[['Leg press',RT],['Kettlebell Romanian deadlift',RT],['Chest press',RT],['Seated row',RT],['Pallof press','10 each side'],['Lateral raise',RT],['Cable biceps curl',RT]],
+    B:[['Goblet squat',RT],['Hyperextensions',RT],['Incline press',RT],['Lat pulldown',RT],['Cable face pull',RT],['Farmers carry','30 seconds'],['Cable overhead tricep extension',RT]],
+    C:[['Step-ups','8–12 each leg'],['Kettlebell swings','12–16 reps'],['Military press',RT],['Single-arm cable row','8–12 each arm'],['Cable rotation','10 each side'],['Hamstring curl',RT],['Preacher curl',RT]],
+    D:[['Goblet squat',RT],['Kettlebell Romanian deadlift',RT],['Dumbbell press',RT],['Lat pulldown',RT],['Cable pullover',RT],['Cable flys',RT],['Leg extensions',RT],['Single-arm cable tricep pulldown','8–12 each arm']]
+  };
+  const ROUT_IDS=Object.keys(DEFAULT_ROUTINES);
+  const defaultRoutines=()=>{ const o={}; ROUT_IDS.forEach(k=>o[k]=DEFAULT_ROUTINES[k].map(([name,target])=>({name,target}))); return o };
+  function normRoutines(r){ const o=defaultRoutines(); if(r&&typeof r==='object') ROUT_IDS.forEach(k=>{ if(Array.isArray(r[k])) o[k]=r[k].filter(e=>e&&typeof e.name==='string'&&e.name.trim()).map(e=>({name:e.name.trim(),target:typeof e.target==='string'?e.target:''})) }); return o }
+  let routinesStored=false, routines=defaultRoutines(), rsaveArmed=null;
+  try{ const raw=JSON.parse(localStorage.getItem(ROUT_KEY)||'null'); if(raw){ routines=normRoutines(raw); routinesStored=true } }catch(e){}
+  function saveRoutines(){ try{ localStorage.setItem(ROUT_KEY,JSON.stringify(routines)); routinesStored=true; return true }catch(e){ toast('This browser is not allowing storage.'); return false } }
+  // Drop the open workout if nothing was logged in it, so tapping A then B does not leave an empty A behind
+  function discardIfUnlogged(){ const id=currentId, s=id&&sessions[id]; if(!s||logged(s)) return;
+    clearTimeout(timers[id]); dirty[id]=false; delete sessions[id];
+    (chains[id]||Promise.resolve()).then(()=>store.remove(id)).catch(()=>{}); }
+  function startRoutine(k){ const r=routines[k]; if(!r||!r.length){ toast('Routine '+k+' is empty'); return }
+    discardIfUnlogged();
+    currentId=uid(); sessions[currentId]={date:today(),unit,createdAt:Date.now(),routine:k,exercises:r.map(e=>Object.assign({name:e.name,sets:Array.from({length:defaultSets},blankSet)},e.target?{target:e.target}:{}))};
+    confirmDelete=false; scheduleSave(currentId); renderAll();
+    const inp=document.getElementById('ex-0-r0'); if(inp) inp.focus();
+    toast('Workout '+k+' ready · '+r.length+' exercises'); }
 
   /* ---------- personal records ---------- */
   const toKg=(w,u)=>u==='lb'?w/2.20462:w;
@@ -347,7 +381,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     }
     return null;
   }
-  const lastText=(last,su)=>last?'Last: '+last.sets.map(fmtSet).join(' · ')+(last.unit!==su?' '+last.unit:''):'';
+  const lastText=(last,su,e)=>last?'Last: '+last.sets.map(fmtSet).join(' · ')+(last.unit!==su?' '+last.unit:''):(e&&e.target?'Target: '+e.target:'');
   /* Previous values show as placeholders so a repeated workout reads like last time's sheet */
   const phReps=(last,k)=>last&&last.sets[k]&&last.sets[k].reps!=null?String(last.sets[k].reps):'reps';
   const phWeight=(last,k,su)=>{ const w=last&&last.sets[k]?last.sets[k].weight:null; return w==null?su:String(convertW(w,last.unit,su)) };
@@ -362,7 +396,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     const su=sessUnit(sess); syncUnitToggle(su);
     const rows=sess.exercises.map((e,i)=>{
       const last=lastFor(e.name,currentId);
-      const lastTxt=lastText(last,su);
+      const lastTxt=lastText(last,su,e);
       const n=e.sets.length, best=bestBefore(e.name,sess);
       return '<div class="ex" data-i="'+i+'">'
         +'<div class="name" style="grid-row:span '+n+'"><input type="text" id="ex-'+i+'-name" list="exnames" placeholder="Exercise" autocomplete="off" value="'+esc(e.name)+'" data-f="name"><div class="last" title="'+esc(lastTxt)+'">'+esc(lastTxt)+'</div></div>'
@@ -376,7 +410,8 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
         +'</div>';
     }).join('');
     el.innerHTML=
-      '<div class="card-head"><span class="eyebrow">Workout</span><input type="date" id="sess-date" value="'+esc(sess.date)+'" aria-label="Workout date"></div>'
+      '<div class="card-head"><span class="eyebrow">Workout'+(sess.routine?' '+esc(sess.routine):'')+'</span><input type="date" id="sess-date" value="'+esc(sess.date)+'" aria-label="Workout date"></div>'
+      +'<div class="rout"><span>Start a routine</span><div class="seg" role="group" aria-label="Start a routine">'+ROUT_IDS.map(k=>'<button type="button" data-rout="'+k+'" aria-pressed="'+(sess.routine===k)+'">'+k+'</button>').join('')+'</div></div>'
       +'<div class="cols"><div class="h exh">Exercise</div><div class="h num">Set</div><div class="h num">Reps</div><div class="h num">Weight ('+su+')</div><div></div>'+rows+'</div>'
       +'<div class="actions"><button type="button" class="btn primary" id="add-ex">+ Add exercise</button>'
       +(lastSession(currentId)?'<button type="button" class="btn" id="repeat-sess" title="Start a new workout with the same exercises as last time">Repeat last</button>':'')
@@ -390,7 +425,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     if(!ids.length){ $('#hist').innerHTML='<li class="empty" style="border:0;background:none">Your first workout will appear here once you log a set.</li>'; return }
     $('#hist').innerHTML=ids.map(id=>{const s=sessions[id];const ex=(s.exercises||[]).filter(e=>e.name.trim());
       return '<li class="'+(id===currentId?'active':'')+'"><button type="button" class="open" data-open="'+id+'">'
-        +'<div class="d"><b>'+esc(fmtDate(s.date))+'</b><span>'+ex.length+' ex · '+volume(s).toLocaleString()+' '+sessUnit(s)+'</span></div>'
+        +'<div class="d"><b>'+esc(fmtDate(s.date))+'</b><span>'+(s.routine?esc(s.routine)+' · ':'')+ex.length+' ex · '+volume(s).toLocaleString()+' '+sessUnit(s)+'</span></div>'
         +(ex.length?'<div class="lines">'+ex.map(e=>{ const best=bestBefore(e.name,s); return '<div><span>'+esc(e.name)+'</span><span>'+e.sets.map(x=>fmtSet(x)+(isPR(s,e,x,best)?'<b class="pr" title="Personal record">★</b>':'')).join(' · ')+'</span></div>' }).join('')+'</div>':'<div class="lines"><div><span style="color:var(--muted)">Empty workout</span></div></div>')
         +'</button></li>'}).join('');
   }
@@ -402,7 +437,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     if(t.id==='sess-date'){ if(t.value){sess.date=t.value; scheduleSave(currentId); renderHistory()} return }
     const ex=t.closest('.ex'); if(!ex) return;
     const e=sess.exercises[+ex.dataset.i]; if(!e) return;
-    if(t.dataset.f==='name'){ e.name=t.value; const last=lastFor(e.name,currentId), su=sessUnit(sess); ex.querySelector('.last').textContent=lastText(last,su);
+    if(t.dataset.f==='name'){ e.name=t.value; const last=lastFor(e.name,currentId), su=sessUnit(sess); ex.querySelector('.last').textContent=lastText(last,su,e);
       const best=bestBefore(e.name,sess);
       e.sets.forEach((s,k)=>{ const r=ex.querySelector('[data-f=reps][data-k="'+k+'"]'), w=ex.querySelector('[data-f=weight][data-k="'+k+'"]'); if(r) r.placeholder=phReps(last,k); if(w) w.placeholder=phWeight(last,k,su);
         const pr=isPR(sess,e,s,best); [r,w].forEach(n=>{ if(n){ n.classList.toggle('pr',pr); n.title=pr?'Personal record':'' } }); }); }
@@ -417,6 +452,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     else if(b.dataset.addset!=null){ const e=sess.exercises[+b.dataset.addset]; if(e&&e.sets.length<MAX_SETS){ e.sets.push(blankSet()); scheduleSave(currentId); renderEditor(); renderHistory(); const inp=document.getElementById('ex-'+b.dataset.addset+'-r'+(e.sets.length-1)); if(inp) inp.focus(); } }
     else if(b.dataset.delset!=null){ const e=sess.exercises[+b.dataset.delset]; if(e&&e.sets.length>1){ const last=e.sets[e.sets.length-1]; if(last.reps!=null||last.weight!=null){ toast('Clear set '+e.sets.length+' first, then remove it'); return } e.sets.pop(); scheduleSave(currentId); renderEditor(); renderHistory(); } }
     else if(b.dataset.rm!=null){ sess.exercises.splice(+b.dataset.rm,1); if(!sess.exercises.length) sess.exercises.push(blankEx()); scheduleSave(currentId); renderEditor(); renderHistory(); }
+    else if(b.dataset.rout){ if(sess&&sess.routine===b.dataset.rout&&!logged(sess)) return; startRoutine(b.dataset.rout); }
     else if(b.id==='new-sess'){ openNew(); }
     else if(b.id==='repeat-sess'){ openRepeat(); }
     else if(b.id==='del-sess'){ confirmDelete=true; renderEditor(); }
@@ -427,17 +463,17 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
   });
   $('#hist').addEventListener('click',ev=>{
     const b=ev.target.closest('[data-open]'); if(!b||!sessions[b.dataset.open]) return;
-    if(currentId&&!hasContent(sessions[currentId])&&currentId!==b.dataset.open) delete sessions[currentId];
+    if(currentId!==b.dataset.open) discardIfUnlogged();
     currentId=b.dataset.open; confirmDelete=false; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
   });
   function openNew(){
-    if(currentId&&sessions[currentId]&&!hasContent(sessions[currentId])) delete sessions[currentId];
+    discardIfUnlogged();
     currentId=uid(); sessions[currentId]=blankSession(); confirmDelete=false; renderAll();
     const inp=document.getElementById('ex-0-name'); if(inp) inp.focus();
   }
   function openRepeat(){
     const src=lastSession(currentId); if(!src){ openNew(); return }
-    if(currentId&&sessions[currentId]&&!hasContent(sessions[currentId])) delete sessions[currentId];
+    discardIfUnlogged();
     currentId=uid(); sessions[currentId]=repeatSession(src); confirmDelete=false; scheduleSave(currentId); renderAll();
     const inp=document.getElementById('ex-0-r0'); if(inp) inp.focus();
     toast('Same exercises as '+fmtDate(src.date)+' — fill in today\'s sets');
@@ -463,6 +499,10 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     // An untouched exercise in the open workout follows the new default
     const sess=sessions[currentId]; if(sess){ let changed=false; sess.exercises.forEach(e=>{ if(!e.name.trim()&&e.sets.every(x=>x.reps==null&&x.weight==null)&&e.sets.length!==n){ e.sets=Array.from({length:n},blankSet); changed=true } }); if(changed) renderEditor(); }
   }
+  $('#rout-save').addEventListener('click',ev=>{ const b=ev.target.closest('[data-rsave]'); if(!b) return; const k=b.dataset.rsave, sess=sessions[currentId];
+    const ex=sess?(sess.exercises||[]).filter(e=>e.name.trim()):[]; if(!ex.length){ toast('Open a workout with exercises first'); return }
+    if(rsaveArmed!==k){ rsaveArmed=k; toast('Tap '+k+' again to replace routine '+k+' with the open workout ('+ex.length+' exercises)',4000); return } // two taps, so a routine is never replaced by accident
+    rsaveArmed=null; routines[k]=ex.map(e=>({name:e.name.trim(),target:e.target||''})); if(saveRoutines()) toast('Routine '+k+' saved · '+ex.length+' exercises'); });
   $('#sets-seg').addEventListener('click',ev=>{ const b=ev.target.closest('[data-sets]'); if(b) setDefaultSets(+b.dataset.sets); });
   setDefaultSets(defaultSets);
 
@@ -496,7 +536,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
 
   function renderWeek(){
     const ws=weekStart(weekDate), we=addDays(ws,6), inWk=d=>d>=ws&&d<=we, t=body.targets;
-    const sDays=new Set(); for(const id in sessions){ const s=sessions[id]; if(hasContent(s)&&inWk(s.date||'')) sDays.add(s.date) }
+    const sDays=new Set(); for(const id in sessions){ const s=sessions[id]; if(logged(s)&&inWk(s.date||'')) sDays.add(s.date) }
     const acts=k=>body.acts.filter(a=>a.type===k&&inWk(a.date));
     const dots=(n,target)=>'<div class="dots" aria-hidden="true">'+Array.from({length:Math.max(target,n)},(_,i)=>'<i class="'+(i<n?'on':'')+'"></i>').join('')+'</div>';
     let done=Math.min(sDays.size,t.strength), total=t.strength;
@@ -652,7 +692,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
     body.weights.forEach(w=>rows.push([w.date,'weight',w.w,w.unit,'']));
     body.measures.forEach(m=>MEAS.forEach(([k])=>{ if(m[k]!=null) rows.push([m.date,k,m[k],'cm','']) }));
     body.acts.forEach(a=>rows.push([a.date,a.type,a.mins??'',a.mins!=null?'min':'','']));
-    const days={}; for(const id in sessions){ const s=sessions[id]; if(hasContent(s)&&s.date) days[s.date]=(days[s.date]||0)+(s.exercises||[]).filter(e=>e.name.trim()).length }
+    const days={}; for(const id in sessions){ const s=sessions[id]; if(logged(s)&&s.date) days[s.date]=(days[s.date]||0)+(s.exercises||[]).filter(e=>e.name.trim()).length }
     for(const d in days) rows.push([d,'strength',days[d],'exercises','']);
     if(!rows.length){ toast('Nothing to export yet'); return }
     rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0]))||String(a[1]).localeCompare(String(b[1])));
@@ -662,7 +702,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
   $('#backup').onclick=()=>{
     const data=localData(); const n=Object.keys(data).length;
     if(!n&&!bodyHas()){ toast('Nothing to back up yet'); return }
-    download('youfit-backup-'+today()+'.json',JSON.stringify({app:'youfit',version:2,exported:new Date().toISOString(),unit,workouts:data,body},null,1),'application/json');
+    download('youfit-backup-'+today()+'.json',JSON.stringify({app:'youfit',version:2,exported:new Date().toISOString(),unit,workouts:data,body,routines},null,1),'application/json');
     toast('Backup saved · '+n+(n===1?' workout':' workouts')+(bodyHas()?' + progress':''));
   };
   $('#restore').onclick=()=>$('#restore-file').click();
@@ -677,6 +717,7 @@ input.pr{border-color:var(--accent);background:var(--accent-soft);color:var(--ac
       const merged=Object.assign({},localData(),w); // keeps what is on this device, adds the backup
       store.replaceAll(merged); sessions={}; currentId=null; dirty={}; saving={}; booted=false;
       if(j.body) mergeBody(j.body);
+      if(j.routines&&!routinesStored){ routines=normRoutines(j.routines); saveRoutines(); } // only when this phone still has the built-in routines
       const n=Object.keys(w).length; onData(merged); toast('Restored · '+n+(n===1?' workout':' workouts')+(j.body?' + progress':''));
     });
   });

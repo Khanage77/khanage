@@ -1,6 +1,6 @@
 /* YouFit Workout Tracker service worker: cache the app shell so it opens offline.
    Bump CACHE when files change so phones pick up the new version. */
-const CACHE = 'youfit-v5';
+const CACHE = 'youfit-v6';
 const SHELL = [
   './',
   './index.html',

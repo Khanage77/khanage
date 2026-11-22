@@ -2,6 +2,7 @@
 
 A phone-first workout logger: two sets per exercise by default — set 3, 4 or 5 under Settings, or tap **+ set** on any exercise. Installs as an app, works offline, data stays on your device.
 
+- **Routines A–D**: tap a letter at the top of the workout card and that routine's exercises are laid out, with a rep target under each name until you have a previous session to beat. Four full-body routines are built in; to make your own, set up a workout and use **Save open workout as routine** under Settings (tap the letter twice).
 - **Repeat last** starts a new workout with the same exercises and set counts as your previous one; last time's reps and weights show faintly in each box so you can match or beat them.
 - **kg / lb** is remembered per workout. Tapping the toggle converts the open workout and becomes the default for new ones; older workouts keep the unit they were logged in.
 - **Personal records**: when a set beats your best ever weight (or reps, for bodyweight moves) for that exercise, you get a "New PR!" cheer, the set turns green, and it is starred in History.
@@ -29,4 +30,4 @@ A phone-first workout logger: two sets per exercise by default — set 3, 4 or 5
 
 ## Updating the app
 
-Edit the files, bump `CACHE` in `sw.js` (e.g. `youfit-v6`), and push. Phones that already have the app show a Reload prompt the next time it is opened or brought to the front.
+Edit the files, bump `CACHE` in `sw.js` (e.g. `youfit-v7`), and push. Phones that already have the app show a Reload prompt the next time it is opened or brought to the front.
